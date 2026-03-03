@@ -1,0 +1,23 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: cybershield-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-cybershield}
+      POSTGRES_USER: ${POSTGRES_USER:-cybershield}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cybershield}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./infra/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cybershield} -d ${POSTGRES_DB:-cybershield}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  db_data:
