@@ -19,5 +19,5 @@ def create_incident(payload: IncidentCreate, db: Session = Depends(get_db)) -> I
 
 @router.get("", response_model=list[IncidentRead])
 def list_incidents(db: Session = Depends(get_db)) -> list[IncidentRead]:
-    records = db.query(Incident).order_by(Incident.reported_at.desc()).limit(100).all()
+    records = db.query(Incident).order_by(Incident.created_at.desc()).limit(100).all()
     return records

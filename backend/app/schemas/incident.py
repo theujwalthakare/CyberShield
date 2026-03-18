@@ -1,23 +1,22 @@
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
 
 
 class IncidentCreate(BaseModel):
-    complaint_id: str
-    crime_type: str
-    victim_area: str
-    district: str
-    state: str
-    latitude: float
-    longitude: float
-    platform_used: str
-    loss_amount: float
-    severity_level: str = "medium"
+    title: str
+    description: Optional[str] = None
+    crime_type: Optional[str] = None
+    status: str = "open"
+    severity: str = "medium"
+    reporter_email: Optional[str] = None
+    location: Optional[str] = None
 
 
 class IncidentRead(IncidentCreate):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    reported_at: datetime
+    created_at: datetime
+    updated_at: datetime

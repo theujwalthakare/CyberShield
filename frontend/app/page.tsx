@@ -1,40 +1,128 @@
-import AlertsList from "@/components/alerts-list";
-import RiskTable from "@/components/risk-table";
-import SummaryCard from "@/components/summary-card";
-import { fetchAlerts, fetchRiskAreas } from "@/lib/api";
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Shield,
+  FileWarning,
+  Activity,
+  BarChart3,
+  Map,
+  BookOpen,
+} from "lucide-react";
 
-export default async function HomePage() {
-  const [riskAreas, alerts] = await Promise.all([fetchRiskAreas(), fetchAlerts()]);
+const features = [
+  {
+    icon: FileWarning,
+    title: "Report Cybercrime",
+    description: "File structured incident reports with guided workflows.",
+  },
+  {
+    icon: Activity,
+    title: "Case Tracking",
+    description: "Real-time status updates from submission to resolution.",
+  },
+  {
+    icon: BarChart3,
+    title: "Analytics Dashboard",
+    description: "Crime trends, risk scoring, and intelligence insights.",
+  },
+  {
+    icon: Map,
+    title: "Threat Map",
+    description: "Geographic visualization of cybercrime hotspots.",
+  },
+  {
+    icon: Shield,
+    title: "AI-Powered Guidance",
+    description: "Personalized action plans based on incident analysis.",
+  },
+  {
+    icon: BookOpen,
+    title: "Knowledge Center",
+    description: "Educational resources on cybercrime prevention.",
+  },
+];
 
-  const highRiskCount = riskAreas.filter((item) =>
-    ["high", "critical"].includes(item.risk_level.toLowerCase())
-  ).length;
-
-  const avgRisk =
-    riskAreas.length > 0
-      ? Math.round(riskAreas.reduce((sum, item) => sum + item.score, 0) / riskAreas.length)
-      : 0;
+export default async function LandingPage() {
+  const { userId } = await auth();
+  if (userId) redirect("/dashboard");
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      <header>
-        <h1 className="text-3xl font-bold text-slate-900">CyberShield Nexus</h1>
-        <p className="mt-2 text-slate-600">
-          Cyber crime intelligence and predictive risk monitoring dashboard
-        </p>
+    <div className="min-h-screen bg-slate-50">
+      {/* Header */}
+      <header className="border-b bg-white">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-2">
+            <Shield className="h-7 w-7 text-blue-600" />
+            <span className="text-xl font-bold text-slate-900">
+              CyberShield Nexus
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link href="/sign-in">
+              <Button variant="ghost">Sign In</Button>
+            </Link>
+            <Link href="/sign-up">
+              <Button>Get Started</Button>
+            </Link>
+          </div>
+        </div>
       </header>
 
-      <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <SummaryCard title="Tracked Areas" value={riskAreas.length} subtitle="Active map zones" />
-        <SummaryCard title="High Risk Areas" value={highRiskCount} subtitle="High + Critical" />
-        <SummaryCard title="Average Risk Score" value={avgRisk} subtitle="0 to 100 scale" />
-        <SummaryCard title="Open Alerts" value={alerts.length} subtitle="Latest notifications" />
+      {/* Hero */}
+      <section className="mx-auto max-w-7xl px-4 py-20 text-center sm:px-6 lg:px-8">
+        <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
+          Cybercrime Assistance &{" "}
+          <span className="text-blue-600">Intelligence Platform</span>
+        </h1>
+        <p className="mx-auto mt-6 max-w-2xl text-lg text-slate-600">
+          Report incidents, receive AI-powered guidance, and help authorities
+          detect emerging cyber threats — all in one secure platform.
+        </p>
+        <div className="mt-10 flex items-center justify-center gap-4">
+          <Link href="/sign-up">
+            <Button size="lg" className="text-base">
+              Report a Cybercrime
+            </Button>
+          </Link>
+          <Link href="#features">
+            <Button size="lg" variant="outline" className="text-base">
+              Explore Features
+            </Button>
+          </Link>
+        </div>
       </section>
 
-      <section className="mt-8 grid gap-6 lg:grid-cols-2">
-        <RiskTable items={riskAreas} />
-        <AlertsList items={alerts} />
+      {/* Features */}
+      <section
+        id="features"
+        className="mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:px-8"
+      >
+        <h2 className="mb-10 text-center text-2xl font-bold text-slate-900">
+          Platform Capabilities
+        </h2>
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {features.map((f) => (
+            <Card key={f.title}>
+              <CardContent className="flex flex-col items-start gap-3 p-6">
+                <f.icon className="h-8 w-8 text-blue-600" />
+                <h3 className="text-lg font-semibold">{f.title}</h3>
+                <p className="text-sm text-muted-foreground">
+                  {f.description}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </section>
-    </main>
+
+      {/* Footer */}
+      <footer className="border-t bg-white py-8 text-center text-sm text-muted-foreground">
+        &copy; {new Date().getFullYear()} CyberShield Nexus. University
+        Project.
+      </footer>
+    </div>
   );
 }
