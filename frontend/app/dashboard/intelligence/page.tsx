@@ -41,12 +41,14 @@ const IntelligenceMap = dynamic(() => import("@/components/intelligence-map"), {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
 
-interface OverviewData { total_cases: number; total_convictions: number; avg_crime_rate: number; total_districts: number; }
-interface TrendData { Year: number; Cases_Reported: number; Convictions: number; }
+interface OverviewData { total_cases: number; total_financial_loss: number; avg_loss_per_case: number; impacted_sectors: number; }
+interface TrendData { Year: number; Cases_Reported: number; Financial_Loss: number; }
 interface DistributionData { crime_type: string; count: number; }
-interface GeographyData { state: string; total_cases: number; total_convictions: number; }
-interface FiltersResponse { years: number[]; states: string[]; crime_types: string[]; }
-interface ForecastData { Year: number; Cases_Reported: number; Convictions: number; is_forecast: boolean; }
+interface DailyData { day: number; count: number; }
+interface CategoryDistData { category: string; count: number; }
+interface GeographyData { state: string; total_cases: number; total_financial_loss: number; }
+interface FiltersResponse { years: number[]; states: string[]; crime_types: string[]; categories: string[]; }
+interface ForecastData { Year: number; Cases_Reported: number; Financial_Loss: number; is_forecast: boolean; Cases_Predicted_Lower?: number; Cases_Predicted_Upper?: number; }
 interface RiskData { State: string; surge_velocity: number; projected_cases: number; }
 
 const PIE_COLORS = ["#06b6d4", "#f43f5e"]; // Cyan, Rose
@@ -57,15 +59,18 @@ export default function IntelligenceDashboard() {
   const isDark = resolvedTheme === "dark";
   
   const [loading, setLoading] = useState(true);
-  const [filterData, setFilterData] = useState<FiltersResponse>({ years: [], states: [], crime_types: [] });
+  const [filterData, setFilterData] = useState<FiltersResponse>({ years: [], states: [], crime_types: [], categories: [] });
   
   const [filterYear, setFilterYear] = useState<string>("All");
   const [filterState, setFilterState] = useState<string>("All");
   const [filterType, setFilterType] = useState<string>("All");
+  const [filterCategory, setFilterCategory] = useState<string>("All");
 
   const [overview, setOverview] = useState<OverviewData | null>(null);
   const [trends, setTrends] = useState<TrendData[]>([]);
   const [distribution, setDistribution] = useState<DistributionData[]>([]);
+  const [dailyDist, setDailyDist] = useState<DailyData[]>([]);
+  const [categoryDist, setCategoryDist] = useState<CategoryDistData[]>([]);
   const [geography, setGeography] = useState<GeographyData[]>([]);
   const [forecast, setForecast] = useState<ForecastData[]>([]);
   const [risks, setRisks] = useState<RiskData[]>([]);
@@ -81,13 +86,17 @@ export default function IntelligenceDashboard() {
       if (filterYear !== "All") query.append("year", filterYear);
       if (filterState !== "All") query.append("state", filterState);
       if (filterType !== "All") query.append("crime_type", filterType);
+      if (filterCategory !== "All") query.append("category", filterCategory);
+      
       
       try {
         const qStr = `?${query.toString()}`;
-        const [oRes, tRes, dRes, gRes, fRes, rRes] = await Promise.all([
+        const [oRes, tRes, dRes, dyRes, cdRes, gRes, fRes, rRes] = await Promise.all([
           fetch(`${API_BASE}/intelligence/overview${qStr}`),
           fetch(`${API_BASE}/intelligence/trends${qStr}`),
           fetch(`${API_BASE}/intelligence/distribution${qStr}`),
+          fetch(`${API_BASE}/intelligence/daily-distribution${qStr}`),
+          fetch(`${API_BASE}/intelligence/category-distribution${qStr}`),
           fetch(`${API_BASE}/intelligence/geography${qStr}`),
           fetch(`${API_BASE}/intelligence/forecast${qStr}`),
           fetch(`${API_BASE}/intelligence/risk${qStr}`)
@@ -95,6 +104,8 @@ export default function IntelligenceDashboard() {
         if (oRes.ok) setOverview(await oRes.json());
         if (tRes.ok) setTrends(await tRes.json());
         if (dRes.ok) setDistribution(await dRes.json());
+        if (dyRes.ok) setDailyDist(await dyRes.json());
+        if (cdRes.ok) setCategoryDist(await cdRes.json());
         if (gRes.ok) setGeography(await gRes.json());
         if (fRes.ok) setForecast(await fRes.json());
         if (rRes.ok) setRisks(await rRes.json());
@@ -105,33 +116,41 @@ export default function IntelligenceDashboard() {
       }
     }
     loadData();
-  }, [filterYear, filterState, filterType]);
+  }, [filterYear, filterState, filterType, filterCategory]);
 
   const fmt = (n: number) => new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(n);
-  
-  const unconvicted = (overview?.total_cases ?? 0) - (overview?.total_convictions ?? 0);
-  const convictionData = [
-      { name: "Convictions Secured", value: overview?.total_convictions ?? 0 },
-      { name: "Cases Pending/Unconvicted", value: unconvicted > 0 ? unconvicted : 0 }
-  ];
+  const fmtCurr = (n: number) => {
+    if (n >= 10000000) return `₹${(n/10000000).toFixed(2)}Cr`;
+    if (n >= 100000) return `₹${(n/100000).toFixed(2)}L`;
+    if (n >= 1000) return `₹${(n/1000).toFixed(1)}K`;
+    return `₹${n.toFixed(0)}`;
+  };
 
   // Process forecast data to separate historic and predicted lines properly
   const formattedForecast = forecast.map((d, i, arr) => {
     if (d.is_forecast) {
-      return { ...d, Cases_Predicted: d.Cases_Reported };
+      return { 
+        ...d, 
+        Cases_Predicted: d.Cases_Reported,
+        confidence_band: [d.Cases_Predicted_Lower, d.Cases_Predicted_Upper]
+      };
     }
     const isLastHistorical = !d.is_forecast && arr[i + 1]?.is_forecast;
     return { 
       ...d, 
       Cases_Actual: d.Cases_Reported, 
-      Cases_Predicted: isLastHistorical ? d.Cases_Reported : null 
+      Cases_Predicted: isLastHistorical ? d.Cases_Reported : null,
+      confidence_band: isLastHistorical ? [d.Cases_Reported, d.Cases_Reported] : null
     };
   });
 
+  const catPieData = categoryDist.map(c => ({ name: c.category, value: c.count }));
+
   const latestHistorical = formattedForecast.find((d, i, arr) => !d.is_forecast && (!arr[i + 1] || arr[i + 1].is_forecast));
   const finalPrediction = formattedForecast[formattedForecast.length - 1];
-  const growthRate = latestHistorical && finalPrediction && latestHistorical.Cases_Actual > 0
-    ? (((finalPrediction.Cases_Predicted - latestHistorical.Cases_Actual) / latestHistorical.Cases_Actual) * 100).toFixed(1)
+  const actualCases = latestHistorical ? (latestHistorical as any).Cases_Actual : 0;
+  const growthRate = latestHistorical && finalPrediction && actualCases > 0
+    ? ((((finalPrediction.Cases_Predicted as number) - actualCases) / actualCases) * 100).toFixed(1)
     : "0";
   const isSurging = parseFloat(growthRate) > 0;
 
@@ -144,7 +163,7 @@ export default function IntelligenceDashboard() {
             Intelligence Center
           </h1>
           <p className="text-muted-foreground dark:text-cyan-400/80 uppercase tracking-widest text-xs mt-2 font-mono md:ml-14">
-            Macro Level Threat Analysis (2014 - 2023)
+            Macro Level Threat Analysis (2020 - 2024)
           </p>
         </div>
 
@@ -166,20 +185,29 @@ export default function IntelligenceDashboard() {
                 </Select>
                 <Select value={filterState} onValueChange={(v) => setFilterState(v || "All")}>
                     <SelectTrigger className="w-[160px] !bg-slate-50 dark:!bg-slate-950 border-slate-300 dark:border-slate-800 focus:ring-cyan-500 font-bold text-slate-800 dark:text-slate-200 truncate">
-                        <SelectValue placeholder="All States" />
+                        <SelectValue placeholder="All Regions" />
                     </SelectTrigger>
-                    <SelectContent alignItemWithTrigger={false} className="!bg-white dark:!bg-slate-950 border-slate-300 dark:border-slate-700 z-[70] shadow-xl">
-                        <SelectItem value="All" className="font-bold">All States</SelectItem>
+                    <SelectContent alignItemWithTrigger={false} className="!bg-white dark:!bg-slate-950 border-slate-300 dark:border-slate-700 z-[70] shadow-xl max-h-[300px]">
+                        <SelectItem value="All" className="font-bold">All Regions</SelectItem>
                         {filterData.states.map(s => <SelectItem key={s} value={s} className="font-medium">{s}</SelectItem>)}
                     </SelectContent>
                 </Select>
                 <Select value={filterType} onValueChange={(v) => setFilterType(v || "All")}>
-                    <SelectTrigger className="w-[180px] sm:w-[220px] !bg-slate-50 dark:!bg-slate-950 border-slate-300 dark:border-slate-800 focus:ring-cyan-500 font-bold text-slate-800 dark:text-slate-200 truncate">
+                    <SelectTrigger className="w-[160px] sm:w-[180px] !bg-slate-50 dark:!bg-slate-950 border-slate-300 dark:border-slate-800 focus:ring-cyan-500 font-bold text-slate-800 dark:text-slate-200 truncate">
                         <SelectValue placeholder="All Threats" />
                     </SelectTrigger>
-                    <SelectContent alignItemWithTrigger={false} className="!bg-white dark:!bg-slate-950 border-slate-300 dark:border-slate-700 z-[70] shadow-xl">
+                    <SelectContent alignItemWithTrigger={false} className="!bg-white dark:!bg-slate-950 border-slate-300 dark:border-slate-700 z-[70] shadow-xl max-h-[300px]">
                         <SelectItem value="All" className="font-bold">All Threats</SelectItem>
                         {filterData.crime_types.map(c => <SelectItem key={c} value={c} className="font-medium">{c}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+                <Select value={filterCategory} onValueChange={(v) => setFilterCategory(v || "All")}>
+                    <SelectTrigger className="w-[160px] sm:w-[180px] !bg-slate-50 dark:!bg-slate-950 border-slate-300 dark:border-slate-800 focus:ring-cyan-500 font-bold text-slate-800 dark:text-slate-200 truncate">
+                        <SelectValue placeholder="All Sectors" />
+                    </SelectTrigger>
+                    <SelectContent alignItemWithTrigger={false} className="!bg-white dark:!bg-slate-950 border-slate-300 dark:border-slate-700 z-[70] shadow-xl max-h-[300px]">
+                        <SelectItem value="All" className="font-bold">All Sectors</SelectItem>
+                        {filterData.categories?.map(c => <SelectItem key={c} value={c} className="font-medium">{c}</SelectItem>)}
                     </SelectContent>
                 </Select>
             </div>
@@ -213,12 +241,12 @@ export default function IntelligenceDashboard() {
           <div className="absolute inset-0 bg-gradient-to-br from-slate-100 dark:from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
           <CardHeader className="pb-2">
             <CardDescription className="text-slate-500 dark:text-emerald-400/80 font-mono text-[11px] font-bold tracking-widest uppercase flex items-center gap-2">
-               <CheckCircle className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" /> Successful Convictions
+               <Activity className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" /> Total Financial Loss
             </CardDescription>
           </CardHeader>
           <CardContent className="p-4 sm:p-6 pt-0 pb-4">
             <p className="text-2xl lg:text-3xl xl:text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 dark:drop-shadow-[0_0_12px_rgba(16,185,129,0.5)]">
-              {fmt(overview?.total_convictions ?? 0)}
+              {fmtCurr(overview?.total_financial_loss ?? 0)}
             </p>
           </CardContent>
         </Card>
@@ -227,12 +255,12 @@ export default function IntelligenceDashboard() {
           <div className="absolute inset-0 bg-gradient-to-br from-slate-100 dark:from-rose-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
           <CardHeader className="pb-2">
             <CardDescription className="text-slate-500 dark:text-rose-400/80 font-mono text-[11px] font-bold tracking-widest uppercase flex items-center gap-2">
-              <TrendingUp className="h-3.5 w-3.5 text-rose-600 dark:text-rose-400" /> Severity / 100k
+              <TrendingUp className="h-3.5 w-3.5 text-rose-600 dark:text-rose-400" /> Average Loss / Case
             </CardDescription>
           </CardHeader>
           <CardContent className="p-4 sm:p-6 pt-0 pb-4">
             <p className="text-2xl lg:text-3xl xl:text-3xl font-extrabold text-rose-600 dark:text-rose-400 dark:drop-shadow-[0_0_12px_rgba(244,63,94,0.5)]">
-              {overview?.avg_crime_rate ?? 0}
+              {fmtCurr(overview?.avg_loss_per_case ?? 0)}
             </p>
           </CardContent>
         </Card>
@@ -241,18 +269,18 @@ export default function IntelligenceDashboard() {
           <div className="absolute inset-0 bg-gradient-to-br from-slate-100 dark:from-amber-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
           <CardHeader className="pb-2">
             <CardDescription className="text-slate-500 dark:text-amber-400/80 font-mono text-[11px] font-bold tracking-widest uppercase flex items-center gap-2">
-              <MapPin className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" /> Geo Districts Scope
+              <MapPin className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" /> Impacted Sectors
             </CardDescription>
           </CardHeader>
           <CardContent className="p-4 sm:p-6 pt-0 pb-4">
             <p className="text-2xl lg:text-3xl xl:text-3xl font-extrabold text-amber-600 dark:text-amber-400 dark:drop-shadow-[0_0_12px_rgba(245,158,11,0.5)]">
-              {overview?.total_districts ?? 0}
+              {overview?.impacted_sectors ?? 0}
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* 2. Map and Pie Chart Row */}
+      {/* 2. Map Visual Row */}
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Threat Map Visual */}
         <Card className="lg:col-span-2 border shadow-slate-200/60 shadow-lg dark:shadow-none dark:glass-panel dark:border-cyan-900/40 animate-in slide-in-from-bottom-8 fade-in duration-700 delay-300 fill-mode-both">
@@ -260,48 +288,80 @@ export default function IntelligenceDashboard() {
             <CardTitle className="text-slate-800 dark:text-cyan-400 tracking-wider text-sm font-mono flex gap-2 items-center">
               <MapIcon className="h-4 w-4"/> REGIONAL IMPACT HOTSPOTS
             </CardTitle>
-            <CardDescription>CartoDB Dark Matter visualization of aggregated coordinates across states.</CardDescription>
+            <CardDescription>CartoDB Dark Matter visualization of aggregated coordinates across targeted cities.</CardDescription>
           </CardHeader>
-          <CardContent className="p-0 overflow-hidden rounded-b-xl relative">
+          <CardContent className="p-0 overflow-hidden rounded-b-xl relative h-[450px] lg:h-auto">
               <div className="absolute inset-0 pointer-events-none shadow-[inset_0_0_30px_rgba(0,0,0,0.2)] dark:shadow-[inset_0_0_50px_rgba(6,182,212,0.1)] z-10" />
               <IntelligenceMap geography={geography} />
           </CardContent>
         </Card>
 
-        {/* Conviction Pie Chart */}
+        {/* Sector Category Pie Chart */}
         <Card className="border shadow-slate-200/60 shadow-lg dark:shadow-none dark:glass-panel dark:border-cyan-900/40 animate-in slide-in-from-bottom-8 fade-in duration-700 delay-400 fill-mode-both flex flex-col">
           <CardHeader className="border-b border-slate-100 dark:border-slate-800/50 bg-slate-50/50 dark:bg-slate-900/30">
             <CardTitle className="text-slate-800 dark:text-cyan-400 tracking-wider text-sm font-mono flex gap-2 items-center">
-              <PieChartIcon className="h-4 w-4"/> LEGAL OUTCOME RATIO
+              <PieChartIcon className="h-4 w-4"/> TARGET SECTOR VULNERABILITY
             </CardTitle>
-            <CardDescription>Proportion of convictions secured.</CardDescription>
+            <CardDescription>Proportional breakdown of cyber incidents by industry category.</CardDescription>
           </CardHeader>
           <CardContent className="flex-1 flex items-center justify-center p-0 pb-6 relative group">
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-cyan-400/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
             <ResponsiveContainer width="100%" height={280}>
                 <PieChart>
                   <Pie
-                    data={convictionData}
+                    data={catPieData}
                     cx="50%"
                     cy="55%"
-                    innerRadius={75}
+                    innerRadius={70}
                     outerRadius={100}
-                    paddingAngle={8}
+                    paddingAngle={4}
                     dataKey="value"
                     stroke="none"
-                    cornerRadius={6}
+                    cornerRadius={4}
                   >
-                    {convictionData.map((_, i) => (
-                      <Cell key={`cell-${i}`} fill={isDark ? PIE_COLORS[i] : PIE_COLORS_DARK[i]} className="drop-shadow-md hover:opacity-80 transition-opacity" />
-                    ))}
+                    {catPieData.map((entry, i) => {
+                      const colors = isDark ? ["#0ea5e9", "#8b5cf6", "#d946ef", "#ec4899", "#f43f5e", "#f59e0b"] : ["#0284c7", "#6d28d9", "#c026d3", "#db2777", "#e11d48", "#d97706"];
+                      return <Cell key={`cell-${i}`} fill={colors[i % colors.length]} className="drop-shadow-sm hover:opacity-80 transition-opacity" />
+                    })}
                   </Pie>
                   <Tooltip 
                      cursor={{fill: isDark ? '#1e293b' : '#f1f5f9'}} 
                      contentStyle={{ backgroundColor: isDark ? '#0f172a' : '#ffffff', borderColor: isDark ? '#1e293b' : '#e2e8f0', borderRadius: '12px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}
-                     formatter={(value: number) => [fmt(value), "Cases"]}
+                     formatter={(value: number, name: string) => [fmt(value), name]}
+                     itemStyle={{ color: isDark ? '#f8fafc' : '#0f172a', fontWeight: 600 }}
                   />
                   <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }}/>
                 </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 3. Temporal Analysis Row */}
+      <div className="grid gap-6 lg:grid-cols-1">
+        <Card className="border shadow-slate-200/60 shadow-lg dark:shadow-none dark:glass-panel dark:border-cyan-900/40 animate-in slide-in-from-bottom-8 fade-in duration-700 delay-500 fill-mode-both">
+          <CardHeader className="border-b border-slate-100 dark:border-slate-800/50 bg-slate-50/50 dark:bg-slate-900/30">
+            <CardTitle className="text-slate-800 dark:text-cyan-400 tracking-wider text-sm font-mono flex gap-2 items-center">
+              <Activity className="h-4 w-4"/> TEMPORAL CYBER EVENTS (DAILY SPREAD)
+            </CardTitle>
+            <CardDescription>Aggregate cyber incident frequency mapped exclusively by the day of the month.</CardDescription>
+          </CardHeader>
+          <CardContent className="pt-6 pb-2">
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={dailyDist} margin={{ top: 10, right: 30, left: -20, bottom: 0 }}>
+                <XAxis dataKey="day" stroke={isDark ? "#475569" : "#94a3b8"} fontSize={11} tickLine={false} axisLine={false} />
+                <YAxis stroke={isDark ? "#475569" : "#94a3b8"} fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} />
+                <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#1e293b" : "#e2e8f0"} vertical={false} />
+                <Tooltip 
+                  cursor={{ fill: isDark ? '#1e293b' : '#f1f5f9' }}
+                  contentStyle={{ backgroundColor: isDark ? '#0f172a' : '#ffffff', borderColor: isDark ? '#1e293b' : '#e2e8f0', borderRadius: '12px' }}
+                  labelStyle={{ color: isDark ? '#e2e8f0' : '#1e293b', fontWeight: 600 }}
+                  itemStyle={{ color: isDark ? '#f8fafc' : '#0f172a', fontWeight: 500 }}
+                  labelFormatter={(label) => `Day ${label} of Month`}
+                  formatter={(value: number) => [fmt(value), "Incidents"]}
+                />
+                <Bar dataKey="count" name="Reported Incidents" fill={isDark ? "#06b6d4" : "#0284c7"} radius={[4, 4, 0, 0]} />
+              </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
@@ -339,9 +399,9 @@ export default function IntelligenceDashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#1e293b" : "#e2e8f0"} vertical={false} />
                 <Tooltip 
                     contentStyle={{ backgroundColor: isDark ? '#0f172a' : '#ffffff', borderColor: isDark ? '#1e293b' : '#e2e8f0', borderRadius: '12px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}
-                    itemStyle={{ color: isDark ? '#e2e8f0' : '#1e293b' }}
+                    itemStyle={{ color: isDark ? '#f8fafc' : '#0f172a', fontWeight: 500 }}
                     formatter={(value: number) => [fmt(value)]}
-                    labelStyle={{ fontWeight: "bold", paddingBottom: "4px" }}
+                    labelStyle={{ color: isDark ? '#e2e8f0' : '#1e293b', fontWeight: "bold", paddingBottom: "4px" }}
                 />
                 <Area type="monotone" name="Cases Reported" dataKey="Cases_Reported" stroke={isDark ? "#f43f5e" : "#e11d48"} strokeWidth={3} fillOpacity={1} fill="url(#colorReported)" />
                 <Area type="monotone" name="Convictions" dataKey="Convictions" stroke={isDark ? "#06b6d4" : "#0284c7"} strokeWidth={3} fillOpacity={1} fill="url(#colorConvicted)" />
@@ -365,6 +425,8 @@ export default function IntelligenceDashboard() {
                      cursor={{fill: isDark ? '#1e293b' : '#f1f5f9'}} 
                      contentStyle={{ backgroundColor: isDark ? '#0f172a' : '#ffffff', borderColor: isDark ? '#1e293b' : '#e2e8f0', borderRadius: '12px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}
                      formatter={(value: number) => [fmt(value), "Cases Recorded"]}
+                     labelStyle={{ color: isDark ? '#e2e8f0' : '#1e293b', fontWeight: 600 }}
+                     itemStyle={{ color: isDark ? '#f8fafc' : '#0f172a', fontWeight: 500 }}
                   />
                   <Bar dataKey="count" radius={[0, 6, 6, 0]} fill={isDark ? "#8b5cf6" : "#6366f1"} barSize={24} className="hover:opacity-80 transition-opacity" />
                 </BarChart>
@@ -376,7 +438,7 @@ export default function IntelligenceDashboard() {
       {/* 4. Predictive Intelligence Row (Machine Learning) */}
       <h2 className="text-xl md:text-2xl font-extrabold flex items-center gap-3 bg-clip-text text-transparent bg-gradient-to-r from-rose-500 to-orange-500 dark:from-rose-400 dark:to-orange-400 tracking-tight pt-8 pb-3">
          <Target className="h-6 w-6 text-rose-500 dark:text-rose-400 drop-shadow-[0_0_10px_rgba(244,63,94,0.8)]" /> 
-         Predictive Threat Matrix (2024-2030 Forecast)
+         Predictive Threat Matrix (2025-2028 Forecast)
       </h2>
 
       <div className="mb-6 animate-in slide-in-from-bottom-4 fade-in duration-700 delay-300">
@@ -391,7 +453,7 @@ export default function IntelligenceDashboard() {
                     Based on crime data from the last 10 years, our AI predicts that overall incidents will 
                     <strong className={isSurging ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}>
                       {' '}{isSurging ? "increase" : "decrease"} by {Math.abs(parseFloat(growthRate))}%
-                    </strong> by {finalPrediction?.Year || 2030}.
+                    </strong> by {finalPrediction?.Year || 2028}.
                     {isSurging ? " Since cases are rising, law enforcement should urgently focus resources on the high-risk 'Surge Regions' listed below to prevent future spikes." : " Since cases are projected to drop, current security measures and awareness campaigns appear to be working successfully!"}
                   </p>
                </div>
@@ -429,6 +491,8 @@ export default function IntelligenceDashboard() {
                 <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '12px', fontWeight: 600 }}/>
                 {/* Historical Area */}
                 <Area type="monotone" name="Historical Actuals" dataKey="Cases_Actual" stroke={isDark ? "#3b82f6" : "#2563eb"} fillOpacity={1} fill="url(#colorActual)" strokeWidth={3} />
+                {/* 95% Confidence Interval */}
+                <Area type="monotone" name="95% Confidence Bound" dataKey="confidence_band" stroke="none" fill={isDark ? "#f43f5e" : "#e11d48"} fillOpacity={0.12} />
                 {/* Predicted Line */}
                 <Line type="monotone" name="Predicted Trajectory" dataKey="Cases_Predicted" stroke={isDark ? "#f43f5e" : "#e11d48"} strokeWidth={3} strokeDasharray="6 6" dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} />
               </ComposedChart>
@@ -442,7 +506,7 @@ export default function IntelligenceDashboard() {
             <CardTitle className="text-slate-800 dark:text-orange-400 tracking-wider text-sm font-mono flex items-center gap-2">
               <ShieldAlert className="w-4 h-4"/> SEVERE SURGE REGIONS
             </CardTitle>
-            <CardDescription>Top highest-velocity growth areas projected for 2024.</CardDescription>
+            <CardDescription>Top highest-velocity growth areas projected for 2028.</CardDescription>
           </CardHeader>
           <CardContent className="p-0 pt-2 lg:p-6 lg:pt-6">
              <div className="flex flex-col gap-4 px-4 pb-4 lg:p-0">

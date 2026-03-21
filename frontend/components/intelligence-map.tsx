@@ -7,41 +7,21 @@ import "leaflet/dist/leaflet.css";
 interface GeographyData {
   state: string;
   total_cases: number;
-  total_convictions: number;
+  total_financial_loss: number;
 }
 
-// Map Indian States to Lat/Lng for visualization
+// Map Indian Cities to Lat/Lng for visualization
 const stateCoordinates: Record<string, [number, number]> = {
-  "Andhra Pradesh": [15.9129, 79.74],
-  "Arunachal Pradesh": [28.218, 94.7278],
-  "Assam": [26.2006, 92.9376],
-  "Bihar": [25.0961, 85.3131],
-  "Chhattisgarh": [25.0961, 81.3131], // approx
+  "Bangalore": [12.9716, 77.5946],
+  "Kolkata": [22.5726, 88.3639],
+  "Ahmedabad": [23.0225, 72.5714],
+  "Jaipur": [26.9124, 75.7873],
+  "Mumbai": [19.0760, 72.8777],
+  "Pune": [18.5204, 73.8567],
+  "Lucknow": [26.8467, 80.9462],
   "Delhi": [28.7041, 77.1025],
-  "Goa": [15.2993, 74.124],
-  "Gujarat": [22.2587, 71.1924],
-  "Haryana": [29.0588, 76.0856],
-  "Himachal Pradesh": [31.1048, 77.1615],
-  "Jharkhand": [21.2787, 81.8661],
-  "Karnataka": [15.3173, 75.7139],
-  "Kerala": [10.8505, 76.2711],
-  "Madhya Pradesh": [22.9734, 78.6569],
-  "Maharashtra": [19.7515, 75.7139],
-  "Manipur": [28.0289, 94.1332],
-  "Meghalaya": [25.467, 91.3662],
-  "Mizoram": [23.1645, 92.9376],
-  "Nagaland": [24.6637, 93.9063],
-  "Odisha": [20.9517, 85.0985],
-  "Punjab": [29.0588, 75.9221],
-  "Rajasthan": [27.0238, 74.2179],
-  "Sikkim": [27.533, 88.5122],
-  "Tamil Nadu": [11.1271, 78.6569],
-  "Telangana": [18.1124, 79.0193],
-  "Tripura": [23.9408, 91.9882],
-  "Uttar Pradesh": [26.8467, 80.9462],
-  "Uttarakhand": [31.1048, 79.1615],
-  "West Bengal": [20.9517, 87.0985],
-  // Add fallback cases
+  "Hyderabad": [17.3850, 78.4867],
+  "Chennai": [13.0827, 80.2707],
 };
 
 export default function IntelligenceMap({ geography }: { geography: GeographyData[] }) {
@@ -63,6 +43,7 @@ export default function IntelligenceMap({ geography }: { geography: GeographyDat
       className="h-[400px] w-full rounded-xl z-0"
     >
       <TileLayer
+        key={isDark ? "dark" : "light"}
         attribution='&copy; <a href="https://carto.com/attributions">CARTO</a>'
         url={isDark 
           ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
@@ -97,9 +78,9 @@ export default function IntelligenceMap({ geography }: { geography: GeographyDat
                     <span className="text-slate-500 font-medium">Total Cases:</span>
                     <span className="font-bold text-rose-500">{fmt(geo.total_cases)}</span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-500 font-medium">Convictions:</span>
-                    <span className="font-bold text-emerald-500">{fmt(geo.total_convictions)}</span>
+                  <div className="flex justify-between items-center gap-4 border-t pt-1 mt-1 border-slate-100 dark:border-slate-700">
+                    <span className="text-slate-500 font-medium whitespace-nowrap">Financial Impact:</span>
+                    <span className="font-bold text-rose-500">₹{fmt(geo.total_financial_loss)}</span>
                   </div>
                 </div>
               </div>
