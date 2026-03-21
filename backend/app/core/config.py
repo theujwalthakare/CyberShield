@@ -9,10 +9,10 @@ class Settings(BaseSettings):
     APP_NAME: str = "CyberShield API"
     ENVIRONMENT: str = "development"
     API_V1_PREFIX: str = "/api/v1"
-    BACKEND_CORS_ORIGINS: list[str] | str = ["https://fwdyudjgnroozqfobziy.supabase.co"]
+    BACKEND_CORS_ORIGINS: list[str] | str = ["http://localhost:3000"]
 
     # Direct database URL (takes precedence over individual vars)
-    DATABASE_URL: str = "https://fwdyudjgnroozqfobziy.supabase.co"
+    DATABASE_URL: str | None = None
 
     POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: int = 5432
@@ -35,8 +35,8 @@ class Settings(BaseSettings):
 
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> str:
-        if self.DATABASE_URL:
-            url = self.DATABASE_URL
+        url = self.DATABASE_URL
+        if isinstance(url, str):
             if url.startswith("postgresql://"):
                 url = url.replace("postgresql://", "postgresql+psycopg://", 1)
             return url
@@ -48,5 +48,6 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-if isinstance(settings.BACKEND_CORS_ORIGINS, str):
-    settings.BACKEND_CORS_ORIGINS = [origin.strip() for origin in settings.BACKEND_CORS_ORIGINS.split(",")]
+cors_origins = settings.BACKEND_CORS_ORIGINS
+if isinstance(cors_origins, str):
+    settings.BACKEND_CORS_ORIGINS = [origin.strip() for origin in cors_origins.split(",")]

@@ -1,6 +1,7 @@
 "use client";
 
 import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
+import { useTheme } from "next-themes";
 import "leaflet/dist/leaflet.css";
 
 interface RiskArea {
@@ -42,6 +43,9 @@ function riskColor(level: string) {
 }
 
 export default function ThreatMapView({ areas }: { areas: RiskArea[] }) {
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
+
   return (
     <MapContainer
       center={DEFAULT_CENTER}
@@ -49,10 +53,17 @@ export default function ThreatMapView({ areas }: { areas: RiskArea[] }) {
       scrollWheelZoom
       className="h-[450px] w-full"
     >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
+      {isDark ? (
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        />
+      ) : (
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+      )}
       {areas.map((area) => {
         const coords = areaCoords[area.area_code];
         if (!coords) return null;
@@ -60,11 +71,12 @@ export default function ThreatMapView({ areas }: { areas: RiskArea[] }) {
           <CircleMarker
             key={area.area_code}
             center={coords}
-            radius={Math.max(8, area.score / 5)}
+            radius={Math.max(12, area.score / 4)}
             pathOptions={{
               color: riskColor(area.risk_level),
               fillColor: riskColor(area.risk_level),
-              fillOpacity: 0.6,
+              fillOpacity: 0.8,
+              weight: 3,
             }}
           >
             <Popup>
