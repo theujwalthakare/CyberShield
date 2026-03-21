@@ -372,7 +372,7 @@ export default function IntelligenceDashboard() {
         <Card className="border shadow-slate-200/60 shadow-lg dark:shadow-none dark:glass-panel dark:border-cyan-900/30 animate-in slide-in-from-bottom-8 fade-in duration-700 delay-500 fill-mode-both">
           <CardHeader>
             <CardTitle className="text-slate-800 dark:text-cyan-400 tracking-wider text-sm font-mono flex items-center gap-2">
-                <Database className="w-4 h-4"/> 10-YEAR MACRO TREND VELOCITY
+                <Database className="w-4 h-4"/> 5-YEAR MACRO TREND VELOCITY
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -450,7 +450,7 @@ export default function IntelligenceDashboard() {
                <div>
                   <h4 className="font-extrabold text-slate-800 dark:text-slate-200 text-base sm:text-lg">AI Prediction Summary</h4>
                   <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
-                    Based on crime data from the last 10 years, our AI predicts that overall incidents will 
+                    Based on crime data from the last 5 years (2020-2024), our AI predicts that overall incidents will 
                     <strong className={isSurging ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}>
                       {' '}{isSurging ? "increase" : "decrease"} by {Math.abs(parseFloat(growthRate))}%
                     </strong> by {finalPrediction?.Year || 2028}.
@@ -469,7 +469,7 @@ export default function IntelligenceDashboard() {
             <CardTitle className="text-slate-800 dark:text-rose-400 tracking-wider text-sm font-mono flex gap-2 items-center">
               <Activity className="h-4 w-4"/> MACHINE LEARNING REGRESSION MODEL
             </CardTitle>
-            <CardDescription>AI-generated projections based on 10-year historical trajectory vectors.</CardDescription>
+            <CardDescription>AI-generated projections based on 5-year historical trajectory vectors.</CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
             <ResponsiveContainer width="100%" height={320}>

@@ -151,17 +151,18 @@ async def get_forecast(state: Optional[str] = None, crime_type: Optional[str] = 
         })
         
     for yr in future_years:
-        pred_cases = int(cases_fit(yr))
+        pred_cases = float(cases_fit(yr))
         # Growth of uncertainty the further out the projection goes
         time_distance = yr - 2024
-        margin = int(se * 1.5 * np.sqrt(1 + time_distance * 0.2))
+        # Apply a wider margin visualization and preserve decimal precision for accurate slope rendering
+        margin = float(se * 1.5 * np.sqrt(1 + time_distance * 0.5))
         
         forecast.append({
             "Year": yr,
-            "Cases_Reported": max(0, pred_cases),
-            "Cases_Predicted_Lower": max(0, pred_cases - margin),
-            "Cases_Predicted_Upper": max(0, pred_cases + margin),
-            "Financial_Loss": 0,
+            "Cases_Reported": max(0, round(pred_cases, 1)),
+            "Cases_Predicted_Lower": max(0, round(pred_cases - margin, 1)),
+            "Cases_Predicted_Upper": max(0, round(pred_cases + margin, 1)),
+            "Financial_Loss": 0.0,
             "is_forecast": True
         })
         
