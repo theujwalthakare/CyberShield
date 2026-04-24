@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTheme } from "next-themes";
 import dynamic from "next/dynamic";
 import {
@@ -35,11 +35,21 @@ import {
   ComposedChart,
   Line
 } from "recharts";
+import {
+  fetchIntelligenceOverview,
+  fetchIntelligenceTrends,
+  fetchIntelligenceDistribution,
+  fetchIntelligenceCategoryDistribution,
+  fetchIntelligenceDailyDistribution,
+  fetchIntelligenceGeography,
+  fetchIntelligenceForecast,
+  fetchIntelligenceRisk,
+  fetchIntelligenceFilters,
+} from "@/lib/api";
+import { supabase } from "@/lib/supabase";
 
 // Dynamically load the IntelligenceMap with SSR disabled
 const IntelligenceMap = dynamic(() => import("@/components/intelligence-map"), { ssr: false, loading: () => <div className="h-[400px] w-full bg-slate-100 dark:bg-slate-900 rounded-xl animate-pulse" /> });
-
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
 
 interface OverviewData { total_cases: number; total_financial_loss: number; avg_loss_per_case: number; impacted_sectors: number; }
 interface TrendData { Year: number; Cases_Reported: number; Financial_Loss: number; }
@@ -74,49 +84,78 @@ export default function IntelligenceDashboard() {
   const [geography, setGeography] = useState<GeographyData[]>([]);
   const [forecast, setForecast] = useState<ForecastData[]>([]);
   const [risks, setRisks] = useState<RiskData[]>([]);
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    fetch(`${API_BASE}/intelligence/filters`).then(r => r.json()).then(setFilterData).catch(() => {});
+    fetchIntelligenceFilters().then(setFilterData).catch(() => {});
   }, []);
 
-  useEffect(() => {
-    async function loadData() {
-      setLoading(true);
-      const query = new URLSearchParams();
-      if (filterYear !== "All") query.append("year", filterYear);
-      if (filterState !== "All") query.append("state", filterState);
-      if (filterType !== "All") query.append("crime_type", filterType);
-      if (filterCategory !== "All") query.append("category", filterCategory);
-      
-      
-      try {
-        const qStr = `?${query.toString()}`;
-        const [oRes, tRes, dRes, dyRes, cdRes, gRes, fRes, rRes] = await Promise.all([
-          fetch(`${API_BASE}/intelligence/overview${qStr}`),
-          fetch(`${API_BASE}/intelligence/trends${qStr}`),
-          fetch(`${API_BASE}/intelligence/distribution${qStr}`),
-          fetch(`${API_BASE}/intelligence/daily-distribution${qStr}`),
-          fetch(`${API_BASE}/intelligence/category-distribution${qStr}`),
-          fetch(`${API_BASE}/intelligence/geography${qStr}`),
-          fetch(`${API_BASE}/intelligence/forecast${qStr}`),
-          fetch(`${API_BASE}/intelligence/risk${qStr}`)
-        ]);
-        if (oRes.ok) setOverview(await oRes.json());
-        if (tRes.ok) setTrends(await tRes.json());
-        if (dRes.ok) setDistribution(await dRes.json());
-        if (dyRes.ok) setDailyDist(await dyRes.json());
-        if (cdRes.ok) setCategoryDist(await cdRes.json());
-        if (gRes.ok) setGeography(await gRes.json());
-        if (fRes.ok) setForecast(await fRes.json());
-        if (rRes.ok) setRisks(await rRes.json());
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    const filters = {
+      year: filterYear,
+      state: filterState,
+      crime_type: filterType,
+      category: filterCategory,
+    };
+
+    try {
+      const [o, t, d, dy, cd, g, f, r] = await Promise.all([
+        fetchIntelligenceOverview(filters),
+        fetchIntelligenceTrends(filters),
+        fetchIntelligenceDistribution(filters),
+        fetchIntelligenceDailyDistribution(filters),
+        fetchIntelligenceCategoryDistribution(filters),
+        fetchIntelligenceGeography(filters),
+        fetchIntelligenceForecast(),
+        fetchIntelligenceRisk(),
+      ]);
+      setOverview(o);
+      setTrends(t);
+      setDistribution(d);
+      setDailyDist(dy);
+      setCategoryDist(cd);
+      setGeography(g);
+      setForecast(f);
+      setRisks(r);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
     }
-    loadData();
   }, [filterYear, filterState, filterType, filterCategory]);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("intelligence-reports-live")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "intelligence_reports" },
+        () => {
+          // Debounce rapid events so we avoid spamming the dashboard queries.
+          if (refreshTimerRef.current) {
+            clearTimeout(refreshTimerRef.current);
+          }
+
+          refreshTimerRef.current = setTimeout(() => {
+            void loadData();
+            void fetchIntelligenceFilters().then(setFilterData).catch(() => {});
+          }, 300);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+      }
+      void supabase.removeChannel(channel);
+    };
+  }, [loadData]);
 
   const fmt = (n: number) => new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(n);
   const fmtCurr = (n: number) => {
@@ -288,7 +327,7 @@ export default function IntelligenceDashboard() {
             <CardTitle className="text-slate-800 dark:text-cyan-400 tracking-wider text-sm font-mono flex gap-2 items-center">
               <MapIcon className="h-4 w-4"/> REGIONAL IMPACT HOTSPOTS
             </CardTitle>
-            <CardDescription>CartoDB Dark Matter visualization of aggregated coordinates across targeted cities.</CardDescription>
+            <CardDescription>Mappls (MapmyIndia) visualization of aggregated regional intelligence markers across targeted cities.</CardDescription>
           </CardHeader>
           <CardContent className="p-0 overflow-hidden rounded-b-xl relative h-[450px] lg:h-auto">
               <div className="absolute inset-0 pointer-events-none shadow-[inset_0_0_30px_rgba(0,0,0,0.2)] dark:shadow-[inset_0_0_50px_rgba(6,182,212,0.1)] z-10" />

@@ -1,0 +1,474 @@
+
+<!DOCTYPE html>
+<div style="font-family:var(--font-sans);padding:12px 0;">
+<style>
+.db-tabs{display:flex;gap:3px;flex-wrap:wrap;margin-bottom:0;}
+.dbt{font-size:11px;padding:5px 11px;border-radius:6px 6px 0 0;border:0.5px solid transparent;cursor:pointer;color:var(--color-text-secondary);background:transparent;white-space:nowrap;}
+.dbt.active{background:var(--color-background-primary);border-color:var(--color-border-tertiary);border-bottom-color:var(--color-background-primary);color:var(--color-text-primary);font-weight:500;}
+.dbp{display:none;background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:0 var(--border-radius-lg) var(--border-radius-lg) var(--border-radius-lg);padding:14px 16px;}
+.dbp.active{display:block;}
+.tbl-card{border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);margin-bottom:14px;overflow:hidden;}
+.tbl-head{padding:9px 13px;display:flex;align-items:center;gap:10px;border-bottom:0.5px solid var(--color-border-tertiary);}
+.tbl-name{font-size:13px;font-weight:500;color:var(--color-text-primary);font-family:monospace;}
+.tbl-desc{font-size:11px;color:var(--color-text-secondary);flex:1;}
+.tbl-badge{font-size:9px;padding:2px 7px;border-radius:3px;font-weight:500;white-space:nowrap;}
+.bd-pg{background:#E6F1FB;color:#0C447C;}
+.bd-neo{background:#EAF3DE;color:#27500A;}
+.bd-wmdb{background:#FAEEDA;color:#412402;}
+.bd-redis{background:#FAECE7;color:#4A1B0C;}
+.bd-append{background:#FCEBEB;color:#501313;}
+.col-row{display:flex;gap:0;font-size:11px;border-bottom:0.5px solid var(--color-border-tertiary);}
+.col-row:last-child{border-bottom:none;}
+.col-row:nth-child(even){background:var(--color-background-secondary);}
+.cc{padding:5px 10px;line-height:1.4;}
+.cc1{width:190px;flex-shrink:0;font-family:monospace;font-size:11px;color:var(--color-text-info);}
+.cc2{width:130px;flex-shrink:0;font-size:10px;color:var(--color-text-warning);}
+.cc3{width:90px;flex-shrink:0;font-size:10px;color:var(--color-text-secondary);}
+.cc4{flex:1;color:var(--color-text-secondary);}
+.col-hd{background:var(--color-background-secondary);border-bottom:0.5px solid var(--color-border-secondary);}
+.col-hd .cc{font-size:10px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.4px;}
+.key-pk{background:var(--color-background-warning);color:var(--color-text-warning);font-size:9px;padding:1px 4px;border-radius:2px;font-weight:500;}
+.key-fk{background:var(--color-background-info);color:var(--color-text-info);font-size:9px;padding:1px 4px;border-radius:2px;font-weight:500;}
+.key-idx{background:var(--color-background-success);color:var(--color-text-success);font-size:9px;padding:1px 4px;border-radius:2px;font-weight:500;}
+.section-lbl{font-size:10px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px;}
+</style>
+
+<div class="db-tabs">
+  <div class="dbt active" onclick="dbt('pg1')">PostgreSQL — Core</div>
+  <div class="dbt" onclick="dbt('pg2')">PostgreSQL — AI + Security</div>
+  <div class="dbt" onclick="dbt('pg3')">PostgreSQL — Investigation</div>
+  <div class="dbt" onclick="dbt('neo')">Neo4j — Graph</div>
+  <div class="dbt" onclick="dbt('wmdb')">WatermelonDB — Mobile</div>
+  <div class="dbt" onclick="dbt('redis')">Redis — Cache</div>
+</div>
+
+<!-- POSTGRESQL CORE -->
+<div id="dbp-pg1" class="dbp active">
+
+<div class="tbl-card">
+<div class="tbl-head">
+  <div class="tbl-name">complaints</div>
+  <span class="tbl-badge bd-pg">PostgreSQL</span>
+  <div class="tbl-desc">Master complaint record — created at intake, updated throughout lifecycle</div>
+</div>
+<div class="col-row col-hd"><div class="cc cc1">Column</div><div class="cc cc2">Type</div><div class="cc cc3">Constraint</div><div class="cc cc4">Description</div></div>
+<div class="col-row"><div class="cc cc1">complaint_id <span class="key-pk">PK</span></div><div class="cc cc2">UUID</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">Auto-generated UUID — shared with victim as complaint reference number</div></div>
+<div class="col-row"><div class="cc cc1">victim_id <span class="key-fk">FK</span></div><div class="cc cc2">UUID</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">References citizens.citizen_id</div></div>
+<div class="col-row"><div class="cc cc1">session_id</div><div class="cc cc2">VARCHAR(64)</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">AI intake session ID — links to dynamic question session in Redis</div></div>
+<div class="col-row"><div class="cc cc1">raw_description</div><div class="cc cc2">TEXT</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">Victim's original free-text or voice-transcribed complaint in their language</div></div>
+<div class="col-row"><div class="cc cc1">language_code <span class="key-idx">IDX</span></div><div class="cc cc2">VARCHAR(10)</div><div class="cc cc3">DEFAULT 'en'</div><div class="cc cc4">ISO language code — en, hi, mr, ta, te, bn, gu etc. (22 scheduled languages)</div></div>
+<div class="col-row"><div class="cc cc1">crime_category <span class="key-idx">IDX</span></div><div class="cc cc2">VARCHAR(60)</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">AI-classified crime type — UPI_FRAUD, DIGITAL_ARREST, HACKING etc. (30 categories)</div></div>
+<div class="col-row"><div class="cc cc1">crime_subcategory</div><div class="cc cc2">VARCHAR(60)</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">More specific sub-type within category — e.g. SIM_SWAP within FINANCIAL_FRAUD</div></div>
+<div class="col-row"><div class="cc cc1">classification_confidence</div><div class="cc cc2">DECIMAL(5,4)</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">RoBERTa model confidence score 0.0000–1.0000. Below 0.80 = human review required</div></div>
+<div class="col-row"><div class="cc cc1">priority_score <span class="key-idx">IDX</span></div><div class="cc cc2">SMALLINT</div><div class="cc cc3">DEFAULT 0</div><div class="cc cc4">0–100 composite score. Drives officer queue ranking. 80+ = critical/golden hour</div></div>
+<div class="col-row"><div class="cc cc1">financial_loss_amount</div><div class="cc cc2">DECIMAL(15,2)</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">Amount lost in INR. NULL if non-financial crime</div></div>
+<div class="col-row"><div class="cc cc1">transaction_reference</div><div class="cc cc2">VARCHAR(50)</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">UTR / UPI transaction ID / IMPS reference — triggers CFCFRMS freeze if present</div></div>
+<div class="col-row"><div class="cc cc1">upi_id_fraudster</div><div class="cc cc2">VARCHAR(100)</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">Fraudster's UPI ID extracted by NLP from complaint text</div></div>
+<div class="col-row"><div class="cc cc1">incident_datetime</div><div class="cc cc2">TIMESTAMPTZ</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">When the crime occurred — victim-provided via dynamic question</div></div>
+<div class="col-row"><div class="cc cc1">status <span class="key-idx">IDX</span></div><div class="cc cc2">VARCHAR(30)</div><div class="cc cc3">DEFAULT 'RECEIVED'</div><div class="cc cc4">RECEIVED → CLASSIFIED → FREEZE_REQUESTED → ASSIGNED → FIR_REGISTERED → INVESTIGATION → CHARGESHEET → VERDICT</div></div>
+<div class="col-row"><div class="cc cc1">assigned_officer_id <span class="key-fk">FK</span></div><div class="cc cc2">UUID</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">References officers.officer_id. NULL until officer is assigned</div></div>
+<div class="col-row"><div class="cc cc1">fir_number</div><div class="cc cc2">VARCHAR(30)</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">FIR number assigned by CCTNS after approval. Format: STATE/STATION/YEAR/NUMBER</div></div>
+<div class="col-row"><div class="cc cc1">freeze_status <span class="key-idx">IDX</span></div><div class="cc cc2">VARCHAR(20)</div><div class="cc cc3">DEFAULT 'NOT_APPLICABLE'</div><div class="cc cc4">NOT_APPLICABLE / PENDING / FROZEN / MOVED / NOT_FOUND</div></div>
+<div class="col-row"><div class="cc cc1">answers_json</div><div class="cc cc2">JSONB</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">All dynamic question answers as key-value pairs — {questionId: answer}</div></div>
+<div class="col-row"><div class="cc cc1">state_code <span class="key-idx">IDX</span></div><div class="cc cc2">VARCHAR(5)</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">Indian state code from victim's address — MH, DL, KA etc. Used for regional heatmap</div></div>
+<div class="col-row"><div class="cc cc1">district_code <span class="key-idx">IDX</span></div><div class="cc cc2">VARCHAR(10)</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">District code for granular geographic intelligence</div></div>
+<div class="col-row"><div class="cc cc1">organized_crime_flag</div><div class="cc cc2">BOOLEAN</div><div class="cc cc3">DEFAULT false</div><div class="cc cc4">Set to true if graph analysis finds this complaint linked to 5+ others via shared entity</div></div>
+<div class="col-row"><div class="cc cc1">is_deleted</div><div class="cc cc2">BOOLEAN</div><div class="cc cc3">DEFAULT false</div><div class="cc cc4">Soft delete only. No complaint record is ever hard deleted — government audit requirement</div></div>
+<div class="col-row"><div class="cc cc1">submitted_at <span class="key-idx">IDX</span></div><div class="cc cc2">TIMESTAMPTZ</div><div class="cc cc3">DEFAULT NOW()</div><div class="cc cc4">Exact submission timestamp — critical for golden hour calculation</div></div>
+<div class="col-row"><div class="cc cc1">updated_at</div><div class="cc cc2">TIMESTAMPTZ</div><div class="cc cc3">DEFAULT NOW()</div><div class="cc cc4">Last update time — auto-updated by trigger on any status change</div></div>
+</div>
+
+<div class="tbl-card">
+<div class="tbl-head">
+  <div class="tbl-name">citizens</div>
+  <span class="tbl-badge bd-pg">PostgreSQL</span>
+  <div class="tbl-desc">Victim / citizen account — authentication and contact</div>
+</div>
+<div class="col-row col-hd"><div class="cc cc1">Column</div><div class="cc cc2">Type</div><div class="cc cc3">Constraint</div><div class="cc cc4">Description</div></div>
+<div class="col-row"><div class="cc cc1">citizen_id <span class="key-pk">PK</span></div><div class="cc cc2">UUID</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">Internal citizen identifier — never shown to user</div></div>
+<div class="col-row"><div class="cc cc1">mobile_number <span class="key-idx">IDX</span></div><div class="cc cc2">VARCHAR(15)</div><div class="cc cc3">UNIQUE NOT NULL</div><div class="cc cc4">Primary identifier for OTP login. Stored with country code (+91XXXXXXXXXX)</div></div>
+<div class="col-row"><div class="cc cc1">mobile_verified</div><div class="cc cc2">BOOLEAN</div><div class="cc cc3">DEFAULT false</div><div class="cc cc4">Set true after first successful OTP verification</div></div>
+<div class="col-row"><div class="cc cc1">full_name</div><div class="cc cc2">VARCHAR(200)</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">Optional — collected only if victim provides it. Not required for complaint filing</div></div>
+<div class="col-row"><div class="cc cc1">preferred_language</div><div class="cc cc2">VARCHAR(10)</div><div class="cc cc3">DEFAULT 'en'</div><div class="cc cc4">User's chosen language for UI and notifications</div></div>
+<div class="col-row"><div class="cc cc1">state_code</div><div class="cc cc2">VARCHAR(5)</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">Victim's state — used for routing complaint to correct state police</div></div>
+<div class="col-row"><div class="cc cc1">digilocker_linked</div><div class="cc cc2">BOOLEAN</div><div class="cc cc3">DEFAULT false</div><div class="cc cc4">Whether DigiLocker is linked for identity verification in FIR</div></div>
+<div class="col-row"><div class="cc cc1">failed_otp_count</div><div class="cc cc2">SMALLINT</div><div class="cc cc3">DEFAULT 0</div><div class="cc cc4">Consecutive failed OTP attempts. Locks at 3 for 10 minutes</div></div>
+<div class="col-row"><div class="cc cc1">locked_until</div><div class="cc cc2">TIMESTAMPTZ</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">Account lockout expiry after repeated failed OTP attempts</div></div>
+<div class="col-row"><div class="cc cc1">fcm_token</div><div class="cc cc2">TEXT</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">Firebase Cloud Messaging token for push notifications — updated on each login</div></div>
+<div class="col-row"><div class="cc cc1">created_at</div><div class="cc cc2">TIMESTAMPTZ</div><div class="cc cc3">DEFAULT NOW()</div><div class="cc cc4">Account creation timestamp</div></div>
+<div class="col-row"><div class="cc cc1">last_login_at</div><div class="cc cc2">TIMESTAMPTZ</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">Most recent successful login</div></div>
+</div>
+
+<div class="tbl-card">
+<div class="tbl-head">
+  <div class="tbl-name">officers</div>
+  <span class="tbl-badge bd-pg">PostgreSQL</span>
+  <div class="tbl-desc">Police officer and I4C admin accounts with role-based access</div>
+</div>
+<div class="col-row col-hd"><div class="cc cc1">Column</div><div class="cc cc2">Type</div><div class="cc cc3">Constraint</div><div class="cc cc4">Description</div></div>
+<div class="col-row"><div class="cc cc1">officer_id <span class="key-pk">PK</span></div><div class="cc cc2">UUID</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">Internal officer identifier</div></div>
+<div class="col-row"><div class="cc cc1">badge_number <span class="key-idx">IDX</span></div><div class="cc cc2">VARCHAR(30)</div><div class="cc cc3">UNIQUE NOT NULL</div><div class="cc cc4">Government-issued badge number — second factor for officer login alongside OTP</div></div>
+<div class="col-row"><div class="cc cc1">full_name</div><div class="cc cc2">VARCHAR(200)</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">Officer's full name as in government records</div></div>
+<div class="col-row"><div class="cc cc1">mobile_number</div><div class="cc cc2">VARCHAR(15)</div><div class="cc cc3">UNIQUE NOT NULL</div><div class="cc cc4">Official mobile number — OTP login</div></div>
+<div class="col-row"><div class="cc cc1">role <span class="key-idx">IDX</span></div><div class="cc cc2">VARCHAR(20)</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">DISTRICT / STATE / NATIONAL / I4C_ADMIN — controls what data officer can see</div></div>
+<div class="col-row"><div class="cc cc1">state_code <span class="key-idx">IDX</span></div><div class="cc cc2">VARCHAR(5)</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">State jurisdiction — DISTRICT and STATE roles see only their state's complaints</div></div>
+<div class="col-row"><div class="cc cc1">district_code <span class="key-idx">IDX</span></div><div class="cc cc2">VARCHAR(10)</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">District jurisdiction — DISTRICT role sees only their district's complaints</div></div>
+<div class="col-row"><div class="cc cc1">police_station</div><div class="cc cc2">VARCHAR(200)</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">Name of the assigned police station for FIR routing</div></div>
+<div class="col-row"><div class="cc cc1">keycloak_id</div><div class="cc cc2">VARCHAR(100)</div><div class="cc cc3">UNIQUE NOT NULL</div><div class="cc cc4">Keycloak identity provider user ID — links to JWT subject claim</div></div>
+<div class="col-row"><div class="cc cc1">is_active</div><div class="cc cc2">BOOLEAN</div><div class="cc cc3">DEFAULT true</div><div class="cc cc4">Deactivation without deletion — officer leaving service retains audit history</div></div>
+<div class="col-row"><div class="cc cc1">fcm_token</div><div class="cc cc2">TEXT</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">Push token for new case assignment alerts</div></div>
+<div class="col-row"><div class="cc cc1">created_at</div><div class="cc cc2">TIMESTAMPTZ</div><div class="cc cc3">DEFAULT NOW()</div><div class="cc cc4">Account creation — typically created by I4C admin</div></div>
+</div>
+
+<div class="tbl-card">
+<div class="tbl-head">
+  <div class="tbl-name">evidence_files</div>
+  <span class="tbl-badge bd-append">APPEND ONLY</span>
+  <span class="tbl-badge bd-pg" style="margin-left:4px;">PostgreSQL</span>
+  <div class="tbl-desc">Forensic evidence record — immutable after insert. No UPDATE or DELETE allowed by DB role</div>
+</div>
+<div class="col-row col-hd"><div class="cc cc1">Column</div><div class="cc cc2">Type</div><div class="cc cc3">Constraint</div><div class="cc cc4">Description</div></div>
+<div class="col-row"><div class="cc cc1">file_id <span class="key-pk">PK</span></div><div class="cc cc2">UUID</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">Unique file identifier — used as MinIO object key</div></div>
+<div class="col-row"><div class="cc cc1">complaint_id <span class="key-fk">FK</span></div><div class="cc cc2">UUID</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">References complaints.complaint_id</div></div>
+<div class="col-row"><div class="cc cc1">original_filename</div><div class="cc cc2">VARCHAR(500)</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">Original filename from victim's device — preserved for court reference</div></div>
+<div class="col-row"><div class="cc cc1">file_type</div><div class="cc cc2">VARCHAR(20)</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">SCREENSHOT / VIDEO / AUDIO / DOCUMENT / TRANSACTION_RECEIPT</div></div>
+<div class="col-row"><div class="cc cc1">mime_type</div><div class="cc cc2">VARCHAR(100)</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">MIME type — image/jpeg, video/mp4, application/pdf etc.</div></div>
+<div class="col-row"><div class="cc cc1">file_size_bytes</div><div class="cc cc2">BIGINT</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">File size in bytes — validated against 50MB limit</div></div>
+<div class="col-row"><div class="cc cc1">sha256_hash</div><div class="cc cc2">CHAR(64)</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">SHA-256 hex digest computed on device before upload — forensic tamper check</div></div>
+<div class="col-row"><div class="cc cc1">minio_storage_path</div><div class="cc cc2">TEXT</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">Full MinIO object path — cybershield-evidence/{complaint_id}/{file_id}</div></div>
+<div class="col-row"><div class="cc cc1">upload_timestamp</div><div class="cc cc2">TIMESTAMPTZ</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">NTP-synchronized server timestamp at upload — not client-provided</div></div>
+<div class="col-row"><div class="cc cc1">uploader_ip</div><div class="cc cc2">INET</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">IP address of uploading device — logged for forensic chain of custody</div></div>
+<div class="col-row"><div class="cc cc1">device_model</div><div class="cc cc2">VARCHAR(200)</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">Device make and model from react-native-device-info</div></div>
+<div class="col-row"><div class="cc cc1">device_os</div><div class="cc cc2">VARCHAR(50)</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">OS and version — Android 13 / iOS 16.2 etc.</div></div>
+<div class="col-row"><div class="cc cc1">exif_gps_lat</div><div class="cc cc2">DECIMAL(10,8)</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">GPS latitude from image EXIF — where photo was taken</div></div>
+<div class="col-row"><div class="cc cc1">exif_gps_lng</div><div class="cc cc2">DECIMAL(11,8)</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">GPS longitude from image EXIF</div></div>
+<div class="col-row"><div class="cc cc1">exif_original_timestamp</div><div class="cc cc2">TIMESTAMPTZ</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">Camera original timestamp from EXIF — compared to incident time for consistency</div></div>
+<div class="col-row"><div class="cc cc1">exif_camera_model</div><div class="cc cc2">VARCHAR(200)</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">Camera model from EXIF metadata</div></div>
+<div class="col-row"><div class="cc cc1">editing_software_detected</div><div class="cc cc2">BOOLEAN</div><div class="cc cc3">DEFAULT false</div><div class="cc cc4">True if EXIF analysis detects image editing software markers</div></div>
+<div class="col-row"><div class="cc cc1">deepfake_score</div><div class="cc cc2">DECIMAL(5,4)</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">CNN deepfake detection probability 0.0–1.0. NULL until analysis runs</div></div>
+<div class="col-row"><div class="cc cc1">deepfake_flagged</div><div class="cc cc2">BOOLEAN</div><div class="cc cc3">DEFAULT false</div><div class="cc cc4">True if deepfake_score exceeds 0.70 threshold</div></div>
+<div class="col-row"><div class="cc cc1">virus_scan_status</div><div class="cc cc2">VARCHAR(20)</div><div class="cc cc3">DEFAULT 'PENDING'</div><div class="cc cc4">PENDING / CLEAN / INFECTED — ClamAV scan result</div></div>
+<div class="col-row"><div class="cc cc1">uploaded_at</div><div class="cc cc2">TIMESTAMPTZ</div><div class="cc cc3">DEFAULT NOW()</div><div class="cc cc4">Row creation timestamp — different from upload_timestamp if upload queued offline</div></div>
+</div>
+
+<div class="tbl-card">
+<div class="tbl-head">
+  <div class="tbl-name">cfcfrms_requests</div>
+  <span class="tbl-badge bd-append">APPEND ONLY</span>
+  <span class="tbl-badge bd-pg" style="margin-left:4px;">PostgreSQL</span>
+  <div class="tbl-desc">Bank freeze requests via CFCFRMS API — every attempt logged immutably</div>
+</div>
+<div class="col-row col-hd"><div class="cc cc1">Column</div><div class="cc cc2">Type</div><div class="cc cc3">Constraint</div><div class="cc cc4">Description</div></div>
+<div class="col-row"><div class="cc cc1">request_id <span class="key-pk">PK</span></div><div class="cc cc2">UUID</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">Unique freeze request identifier</div></div>
+<div class="col-row"><div class="cc cc1">complaint_id <span class="key-fk">FK</span></div><div class="cc cc2">UUID</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">References complaints.complaint_id</div></div>
+<div class="col-row"><div class="cc cc1">transaction_reference</div><div class="cc cc2">VARCHAR(50)</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">UTR/UPI/IMPS reference sent to CFCFRMS</div></div>
+<div class="col-row"><div class="cc cc1">amount</div><div class="cc cc2">DECIMAL(15,2)</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">Amount requested to be frozen</div></div>
+<div class="col-row"><div class="cc cc1">beneficiary_bank_ifsc</div><div class="cc cc2">VARCHAR(15)</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">Fraudster's bank IFSC code — extracted from transaction</div></div>
+<div class="col-row"><div class="cc cc1">beneficiary_account</div><div class="cc cc2">VARCHAR(30)</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">Fraudster's account number — masked in display but stored for investigation</div></div>
+<div class="col-row"><div class="cc cc1">hop_number</div><div class="cc cc2">SMALLINT</div><div class="cc cc3">DEFAULT 1</div><div class="cc cc4">Which hop in the money trail — 1 = direct recipient, 2+ = onward transfers</div></div>
+<div class="col-row"><div class="cc cc1">cfcfrms_status</div><div class="cc cc2">VARCHAR(20)</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">PENDING / FROZEN / MOVED / NOT_FOUND / ALREADY_WITHDRAWN</div></div>
+<div class="col-row"><div class="cc cc1">amount_frozen</div><div class="cc cc2">DECIMAL(15,2)</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">Actual amount successfully frozen — may be less than requested</div></div>
+<div class="col-row"><div class="cc cc1">freeze_confirmed_at</div><div class="cc cc2">TIMESTAMPTZ</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">When bank confirmed the freeze — latency from request_sent_at to this</div></div>
+<div class="col-row"><div class="cc cc1">request_sent_at</div><div class="cc cc2">TIMESTAMPTZ</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">When system sent freeze request to CFCFRMS API</div></div>
+<div class="col-row"><div class="cc cc1">time_since_fraud_seconds</div><div class="cc cc2">INTEGER</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">Seconds between crime time and freeze request — key metric for golden hour analysis</div></div>
+</div>
+
+</div>
+
+<!-- POSTGRESQL AI + SECURITY -->
+<div id="dbp-pg2" class="dbp">
+
+<div class="tbl-card">
+<div class="tbl-head">
+  <div class="tbl-name">ai_decisions</div>
+  <span class="tbl-badge bd-append">APPEND ONLY</span>
+  <span class="tbl-badge bd-pg" style="margin-left:4px;">PostgreSQL</span>
+  <div class="tbl-desc">Immutable audit log of every AI decision — legally required under DPDP Act 2023</div>
+</div>
+<div class="col-row col-hd"><div class="cc cc1">Column</div><div class="cc cc2">Type</div><div class="cc cc3">Constraint</div><div class="cc cc4">Description</div></div>
+<div class="col-row"><div class="cc cc1">decision_id <span class="key-pk">PK</span></div><div class="cc cc2">UUID</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">Unique decision record identifier</div></div>
+<div class="col-row"><div class="cc cc1">complaint_id <span class="key-fk">FK</span></div><div class="cc cc2">UUID</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">References complaints.complaint_id</div></div>
+<div class="col-row"><div class="cc cc1">decision_type</div><div class="cc cc2">VARCHAR(40)</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">CLASSIFICATION / PRIORITY_SCORE / FREEZE_TRIGGER / DEEPFAKE_FLAG / FIR_DRAFT</div></div>
+<div class="col-row"><div class="cc cc1">model_name</div><div class="cc cc2">VARCHAR(100)</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">Exact model used — roberta-base-cybercrime-v2.1, isolation-forest-dis-v1.3 etc.</div></div>
+<div class="col-row"><div class="cc cc1">model_version</div><div class="cc cc2">VARCHAR(20)</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">Semantic version — critical for debugging model drift over time</div></div>
+<div class="col-row"><div class="cc cc1">input_text</div><div class="cc cc2">TEXT</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">Input given to model — complaint text for classification, metric vector for DIS</div></div>
+<div class="col-row"><div class="cc cc1">output_value</div><div class="cc cc2">JSONB</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">Model output — {category, confidence} for classifier; {score, threshold} for DIS</div></div>
+<div class="col-row"><div class="cc cc1">shap_explanation</div><div class="cc cc2">JSONB</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">SHAP values — which input features drove the decision. {word: contribution_score}</div></div>
+<div class="col-row"><div class="cc cc1">human_override</div><div class="cc cc2">BOOLEAN</div><div class="cc cc3">DEFAULT false</div><div class="cc cc4">True if officer manually corrected this AI decision — feeds retraining pipeline</div></div>
+<div class="col-row"><div class="cc cc1">override_value</div><div class="cc cc2">VARCHAR(100)</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">What the officer corrected it to — training label for next model version</div></div>
+<div class="col-row"><div class="cc cc1">overriding_officer_id <span class="key-fk">FK</span></div><div class="cc cc2">UUID</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">Which officer made the correction</div></div>
+<div class="col-row"><div class="cc cc1">decided_at</div><div class="cc cc2">TIMESTAMPTZ</div><div class="cc cc3">DEFAULT NOW()</div><div class="cc cc4">Timestamp of AI decision — enables temporal audit trail</div></div>
+<div class="col-row"><div class="cc cc1">inference_latency_ms</div><div class="cc cc2">INTEGER</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">How long model inference took in milliseconds — performance monitoring</div></div>
+</div>
+
+<div class="tbl-card">
+<div class="tbl-head">
+  <div class="tbl-name">complaint_entities</div>
+  <span class="tbl-badge bd-pg">PostgreSQL</span>
+  <div class="tbl-desc">Extracted suspect identifiers from each complaint — feeds Neo4j graph</div>
+</div>
+<div class="col-row col-hd"><div class="cc cc1">Column</div><div class="cc cc2">Type</div><div class="cc cc3">Constraint</div><div class="cc cc4">Description</div></div>
+<div class="col-row"><div class="cc cc1">entity_id <span class="key-pk">PK</span></div><div class="cc cc2">UUID</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">Unique entity extraction record</div></div>
+<div class="col-row"><div class="cc cc1">complaint_id <span class="key-fk">FK</span> <span class="key-idx">IDX</span></div><div class="cc cc2">UUID</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">References complaints.complaint_id</div></div>
+<div class="col-row"><div class="cc cc1">entity_type <span class="key-idx">IDX</span></div><div class="cc cc2">VARCHAR(20)</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">PHONE / UPI_ID / BANK_ACCOUNT / EMAIL / IP_ADDRESS / IMEI / URL / SOCIAL_HANDLE</div></div>
+<div class="col-row"><div class="cc cc1">entity_value <span class="key-idx">IDX</span></div><div class="cc cc2">VARCHAR(500)</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">Normalized value — phone numbers in E.164, UPI IDs lowercased, IPs in dot notation</div></div>
+<div class="col-row"><div class="cc cc1">entity_value_hash <span class="key-idx">IDX</span></div><div class="cc cc2">CHAR(64)</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">SHA-256 hash of entity_value — fast exact-match lookup without full text comparison</div></div>
+<div class="col-row"><div class="cc cc1">extraction_method</div><div class="cc cc2">VARCHAR(20)</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">NLP_REGEX / ML_NER / VICTIM_INPUT — how this entity was extracted</div></div>
+<div class="col-row"><div class="cc cc1">confidence</div><div class="cc cc2">DECIMAL(5,4)</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">Extraction confidence — 1.0 for victim input, 0.0–1.0 for ML extraction</div></div>
+<div class="col-row"><div class="cc cc1">mha_fraud_flag</div><div class="cc cc2">BOOLEAN</div><div class="cc cc3">DEFAULT false</div><div class="cc cc4">True if OSINT service found this entity in I4C's national fraud database</div></div>
+<div class="col-row"><div class="cc cc1">tafcop_result_json</div><div class="cc cc2">JSONB</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">TRAFCOP lookup result for phone entities — {simCount, aadhaarLinked, state}</div></div>
+<div class="col-row"><div class="cc cc1">extracted_at</div><div class="cc cc2">TIMESTAMPTZ</div><div class="cc cc3">DEFAULT NOW()</div><div class="cc cc4">When entity was extracted — for OSINT staleness tracking</div></div>
+</div>
+
+<div class="tbl-card">
+<div class="tbl-head">
+  <div class="tbl-name">otp_sessions</div>
+  <span class="tbl-badge bd-pg">PostgreSQL</span>
+  <div class="tbl-desc">OTP authentication sessions — short-lived, auto-purged after 10 minutes</div>
+</div>
+<div class="col-row col-hd"><div class="cc cc1">Column</div><div class="cc cc2">Type</div><div class="cc cc3">Constraint</div><div class="cc cc4">Description</div></div>
+<div class="col-row"><div class="cc cc1">session_id <span class="key-pk">PK</span></div><div class="cc cc2">UUID</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">OTP session identifier returned to client</div></div>
+<div class="col-row"><div class="cc cc1">mobile_number <span class="key-idx">IDX</span></div><div class="cc cc2">VARCHAR(15)</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">Mobile number OTP was sent to</div></div>
+<div class="col-row"><div class="cc cc1">otp_hash</div><div class="cc cc2">CHAR(64)</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">SHA-256 hash of OTP — never stored in plain text</div></div>
+<div class="col-row"><div class="cc cc1">attempt_count</div><div class="cc cc2">SMALLINT</div><div class="cc cc3">DEFAULT 0</div><div class="cc cc4">Number of verification attempts — invalid after 3</div></div>
+<div class="col-row"><div class="cc cc1">verified</div><div class="cc cc2">BOOLEAN</div><div class="cc cc3">DEFAULT false</div><div class="cc cc4">Set true on successful verification — cannot be used again after this</div></div>
+<div class="col-row"><div class="cc cc1">expires_at</div><div class="cc cc2">TIMESTAMPTZ</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">OTP expiry — 10 minutes from generation. PostgreSQL cron job purges expired rows</div></div>
+<div class="col-row"><div class="cc cc1">created_at</div><div class="cc cc2">TIMESTAMPTZ</div><div class="cc cc3">DEFAULT NOW()</div><div class="cc cc4">When OTP was generated and sent</div></div>
+</div>
+
+<div class="tbl-card">
+<div class="tbl-head">
+  <div class="tbl-name">safety_guidance_delivery</div>
+  <span class="tbl-badge bd-pg">PostgreSQL</span>
+  <div class="tbl-desc">Tracks which safety steps were sent to victim and acknowledged</div>
+</div>
+<div class="col-row col-hd"><div class="cc cc1">Column</div><div class="cc cc2">Type</div><div class="cc cc3">Constraint</div><div class="cc cc4">Description</div></div>
+<div class="col-row"><div class="cc cc1">delivery_id <span class="key-pk">PK</span></div><div class="cc cc2">UUID</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">Unique delivery record</div></div>
+<div class="col-row"><div class="cc cc1">complaint_id <span class="key-fk">FK</span></div><div class="cc cc2">UUID</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">References complaints.complaint_id</div></div>
+<div class="col-row"><div class="cc cc1">step_code</div><div class="cc cc2">VARCHAR(60)</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">Unique step identifier — CALL_BANK / BLOCK_NUMBER / CHANGE_PASSWORD etc.</div></div>
+<div class="col-row"><div class="cc cc1">urgency</div><div class="cc cc2">VARCHAR(15)</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">IMMEDIATE / TODAY / THIS_WEEK — drives notification timing and display priority</div></div>
+<div class="col-row"><div class="cc cc1">delivered_at</div><div class="cc cc2">TIMESTAMPTZ</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">When guidance was shown/sent to victim</div></div>
+<div class="col-row"><div class="cc cc1">acknowledged_at</div><div class="cc cc2">TIMESTAMPTZ</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">When victim tapped "Done" on this step in the app</div></div>
+</div>
+
+</div>
+
+<!-- POSTGRESQL INVESTIGATION -->
+<div id="dbp-pg3" class="dbp">
+
+<div class="tbl-card">
+<div class="tbl-head">
+  <div class="tbl-name">fir_drafts</div>
+  <span class="tbl-badge bd-pg">PostgreSQL</span>
+  <div class="tbl-desc">AI-generated FIR drafts awaiting officer review and approval</div>
+</div>
+<div class="col-row col-hd"><div class="cc cc1">Column</div><div class="cc cc2">Type</div><div class="cc cc3">Constraint</div><div class="cc cc4">Description</div></div>
+<div class="col-row"><div class="cc cc1">draft_id <span class="key-pk">PK</span></div><div class="cc cc2">UUID</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">Draft identifier — discarded after officer approval and CCTNS submission</div></div>
+<div class="col-row"><div class="cc cc1">complaint_id <span class="key-fk">FK</span></div><div class="cc cc2">UUID</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">References complaints.complaint_id</div></div>
+<div class="col-row"><div class="cc cc1">generated_by_model</div><div class="cc cc2">VARCHAR(100)</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">Which AI model version generated this draft</div></div>
+<div class="col-row"><div class="cc cc1">complainant_name</div><div class="cc cc2">VARCHAR(200)</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">Pre-filled from DigiLocker or citizen profile</div></div>
+<div class="col-row"><div class="cc cc1">complainant_address</div><div class="cc cc2">TEXT</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">Pre-filled from citizen profile</div></div>
+<div class="col-row"><div class="cc cc1">incident_description</div><div class="cc cc2">TEXT</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">AI-assembled narrative from all dynamic question answers — officer may edit</div></div>
+<div class="col-row"><div class="cc cc1">bns_sections</div><div class="cc cc2">VARCHAR(200)</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">Applicable BNSS 2023 sections — auto-mapped from crime category</div></div>
+<div class="col-row"><div class="cc cc1">it_act_sections</div><div class="cc cc2">VARCHAR(200)</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">Applicable IT Act 2000 sections — auto-mapped from crime category</div></div>
+<div class="col-row"><div class="cc cc1">accused_details_json</div><div class="cc cc2">JSONB</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">Array of accused persons — {name, phone, account, address} from OSINT and victim input</div></div>
+<div class="col-row"><div class="cc cc1">evidence_file_ids</div><div class="cc cc2">UUID[]</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">Array of evidence_files.file_id included in this FIR</div></div>
+<div class="col-row"><div class="cc cc1">officer_edits_json</div><div class="cc cc2">JSONB</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">Track what officer changed from AI draft — {field, original, edited} for audit</div></div>
+<div class="col-row"><div class="cc cc1">approval_status</div><div class="cc cc2">VARCHAR(20)</div><div class="cc cc3">DEFAULT 'PENDING'</div><div class="cc cc4">PENDING / APPROVED / REJECTED / SENT_TO_CCTNS</div></div>
+<div class="col-row"><div class="cc cc1">approving_officer_id <span class="key-fk">FK</span></div><div class="cc cc2">UUID</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">Officer who approved — biometric signature recorded</div></div>
+<div class="col-row"><div class="cc cc1">approved_at</div><div class="cc cc2">TIMESTAMPTZ</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">Approval timestamp — FIR is locked after this point</div></div>
+<div class="col-row"><div class="cc cc1">fir_pdf_path</div><div class="cc cc2">TEXT</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">MinIO path to generated PDF — populated after CCTNS submission</div></div>
+<div class="col-row"><div class="cc cc1">generated_at</div><div class="cc cc2">TIMESTAMPTZ</div><div class="cc cc3">DEFAULT NOW()</div><div class="cc cc4">When AI generated this draft</div></div>
+</div>
+
+<div class="tbl-card">
+<div class="tbl-head">
+  <div class="tbl-name">case_lifecycle</div>
+  <span class="tbl-badge bd-pg">PostgreSQL</span>
+  <div class="tbl-desc">Full prosecution lifecycle from FIR to verdict — integrates with e-Courts NJDG</div>
+</div>
+<div class="col-row col-hd"><div class="cc cc1">Column</div><div class="cc cc2">Type</div><div class="cc cc3">Constraint</div><div class="cc cc4">Description</div></div>
+<div class="col-row"><div class="cc cc1">case_id <span class="key-pk">PK</span></div><div class="cc cc2">UUID</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">Case identifier</div></div>
+<div class="col-row"><div class="cc cc1">complaint_id <span class="key-fk">FK</span></div><div class="cc cc2">UUID</div><div class="cc cc3">UNIQUE NOT NULL</div><div class="cc cc4">References complaints.complaint_id — one complaint = one case</div></div>
+<div class="col-row"><div class="cc cc1">fir_number</div><div class="cc cc2">VARCHAR(30)</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">FIR number from CCTNS — auto-populated when CCTNS confirms registration</div></div>
+<div class="col-row"><div class="cc cc1">investigating_officer_id <span class="key-fk">FK</span></div><div class="cc cc2">UUID</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">Officer assigned to full investigation</div></div>
+<div class="col-row"><div class="cc cc1">chargesheet_filed_at</div><div class="cc cc2">TIMESTAMPTZ</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">When chargesheet submitted to court</div></div>
+<div class="col-row"><div class="cc cc1">court_name</div><div class="cc cc2">VARCHAR(300)</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">Assigned court — from e-Courts NJDG integration</div></div>
+<div class="col-row"><div class="cc cc1">next_court_date</div><div class="cc cc2">DATE</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">Next scheduled hearing — synced from e-Courts NJDG</div></div>
+<div class="col-row"><div class="cc cc1">verdict</div><div class="cc cc2">VARCHAR(20)</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">CONVICTED / ACQUITTED / DISMISSED / PENDING</div></div>
+<div class="col-row"><div class="cc cc1">sentence_description</div><div class="cc cc2">TEXT</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">Free text sentence — e.g. "3 years rigorous imprisonment + Rs 50,000 fine"</div></div>
+<div class="col-row"><div class="cc cc1">amount_ordered_restored</div><div class="cc cc2">DECIMAL(15,2)</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">Amount court ordered to be restored to victim</div></div>
+<div class="col-row"><div class="cc cc1">amount_actually_restored</div><div class="cc cc2">DECIMAL(15,2)</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">Amount actually credited back to victim — tracks the 0.32% restoration gap</div></div>
+<div class="col-row"><div class="cc cc1">last_updated_at</div><div class="cc cc2">TIMESTAMPTZ</div><div class="cc cc3">DEFAULT NOW()</div><div class="cc cc4">Last update — triggers victim push notification on any status change</div></div>
+</div>
+
+<div class="tbl-card">
+<div class="tbl-head">
+  <div class="tbl-name">dis_anomaly_events</div>
+  <span class="tbl-badge bd-append">APPEND ONLY</span>
+  <span class="tbl-badge bd-pg" style="margin-left:4px;">PostgreSQL</span>
+  <div class="tbl-desc">Digital Immune System — every detected anomaly and autonomous response logged</div>
+</div>
+<div class="col-row col-hd"><div class="cc cc1">Column</div><div class="cc cc2">Type</div><div class="cc cc3">Constraint</div><div class="cc cc4">Description</div></div>
+<div class="col-row"><div class="cc cc1">event_id <span class="key-pk">PK</span></div><div class="cc cc2">UUID</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">Unique event identifier</div></div>
+<div class="col-row"><div class="cc cc1">node_hostname <span class="key-idx">IDX</span></div><div class="cc cc2">VARCHAR(100)</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">Kubernetes node where anomaly was detected</div></div>
+<div class="col-row"><div class="cc cc1">pod_name</div><div class="cc cc2">VARCHAR(200)</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">Affected pod if anomaly localized to pod level</div></div>
+<div class="col-row"><div class="cc cc1">isolation_forest_score</div><div class="cc cc2">DECIMAL(7,6)</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">Isolation Forest anomaly score 0.0–1.0 at detection time</div></div>
+<div class="col-row"><div class="cc cc1">autoencoder_score</div><div class="cc cc2">DECIMAL(7,6)</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">Autoencoder reconstruction error score</div></div>
+<div class="col-row"><div class="cc cc1">ensemble_score</div><div class="cc cc2">DECIMAL(7,6)</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">Weighted ensemble of both models — threshold 0.70 triggers response</div></div>
+<div class="col-row"><div class="cc cc1">metric_snapshot_json</div><div class="cc cc2">JSONB</div><div class="cc cc3">NOT NULL</div><div class="cc cc4">CPU/memory/network/latency values at detection time — forensic record</div></div>
+<div class="col-row"><div class="cc cc1">response_action</div><div class="cc cc2">VARCHAR(30)</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">POD_ISOLATED / POD_RESTARTED / ROLLOUT_RESTARTED / NONE (below threshold)</div></div>
+<div class="col-row"><div class="cc cc1">response_executed_at</div><div class="cc cc2">TIMESTAMPTZ</div><div class="cc cc3">NULLABLE</div><div class="cc cc4">When Kubernetes action was executed — latency from detected_at to this</div></div>
+<div class="col-row"><div class="cc cc1">detected_at <span class="key-idx">IDX</span></div><div class="cc cc2">TIMESTAMPTZ</div><div class="cc cc3">DEFAULT NOW()</div><div class="cc cc4">Detection timestamp — time-series analysis and dashboard charts</div></div>
+</div>
+
+</div>
+
+<!-- NEO4J -->
+<div id="dbp-neo" class="dbp">
+
+<div class="tbl-card">
+<div class="tbl-head">
+  <div class="tbl-name">Node: Complaint</div>
+  <span class="tbl-badge bd-neo">Neo4j</span>
+  <div class="tbl-desc">Each complaint is a graph node — connected to suspect entity nodes via relationship edges</div>
+</div>
+<div class="col-row col-hd"><div class="cc cc1">Property</div><div class="cc cc2">Type</div><div class="cc cc3">Index</div><div class="cc cc4">Description</div></div>
+<div class="col-row"><div class="cc cc1">id</div><div class="cc cc2">String</div><div class="cc cc3">UNIQUE</div><div class="cc cc4">Same UUID as complaints.complaint_id in PostgreSQL — the bridge between systems</div></div>
+<div class="col-row"><div class="cc cc1">crimeCategory</div><div class="cc cc2">String</div><div class="cc cc3">INDEX</div><div class="cc cc4">Crime type — used for graph filtering by category</div></div>
+<div class="col-row"><div class="cc cc1">financialLoss</div><div class="cc cc2">Float</div><div class="cc cc3">—</div><div class="cc cc4">Loss amount — node size proportional to this in graph visualization</div></div>
+<div class="col-row"><div class="cc cc1">stateCode</div><div class="cc cc2">String</div><div class="cc cc3">INDEX</div><div class="cc cc4">State — geographic clustering of complaint nodes</div></div>
+<div class="col-row"><div class="cc cc1">submittedAt</div><div class="cc cc2">DateTime</div><div class="cc cc3">INDEX</div><div class="cc cc4">Submission timestamp — time-filtered graph queries</div></div>
+<div class="col-row"><div class="cc cc1">priorityScore</div><div class="cc cc2">Integer</div><div class="cc cc3">—</div><div class="cc cc4">Priority for visual emphasis in graph — higher = larger node</div></div>
+</div>
+
+<div class="tbl-card">
+<div class="tbl-head">
+  <div class="tbl-name">Nodes: Phone · UPI_ID · BankAccount · Email · IP · IMEI · URL</div>
+  <span class="tbl-badge bd-neo">Neo4j</span>
+  <div class="tbl-desc">Suspect entity nodes — one node per unique entity value across ALL complaints</div>
+</div>
+<div class="col-row col-hd"><div class="cc cc1">Property</div><div class="cc cc2">Type</div><div class="cc cc3">Index</div><div class="cc cc4">Description</div></div>
+<div class="col-row"><div class="cc cc1">value</div><div class="cc cc2">String</div><div class="cc cc3">UNIQUE per label</div><div class="cc cc4">Normalized entity value — +91XXXXXXXXXX for phone, xxx@upi for UPI, CIDR for IP</div></div>
+<div class="col-row"><div class="cc cc1">fraudFlagged</div><div class="cc cc2">Boolean</div><div class="cc cc3">INDEX</div><div class="cc cc4">True if found in MHA/I4C fraud database — shown as red node in graph</div></div>
+<div class="col-row"><div class="cc cc1">linkedComplaintCount</div><div class="cc cc2">Integer</div><div class="cc cc3">INDEX</div><div class="cc cc4">How many complaints share this entity — incremented on each new link. Hub detection</div></div>
+<div class="col-row"><div class="cc cc1">tafcopSimCount</div><div class="cc cc2">Integer</div><div class="cc cc3">—</div><div class="cc cc4">Phone nodes only — number of SIMs registered on linked Aadhaar (mule flag if > 9)</div></div>
+<div class="col-row"><div class="cc cc1">domainAgeDays</div><div class="cc cc2">Integer</div><div class="cc cc3">—</div><div class="cc cc4">URL nodes only — domain registration age in days (< 30 = high fraud probability)</div></div>
+<div class="col-row"><div class="cc cc1">firstSeenAt</div><div class="cc cc2">DateTime</div><div class="cc cc3">—</div><div class="cc cc4">When this entity first appeared in any complaint</div></div>
+<div class="col-row"><div class="cc cc1">lastSeenAt</div><div class="cc cc2">DateTime</div><div class="cc cc3">—</div><div class="cc cc4">Most recent complaint mentioning this entity</div></div>
+</div>
+
+<div class="tbl-card">
+<div class="tbl-head">
+  <div class="tbl-name">Relationships: USES_PHONE · USES_UPI · LINKED_TO_ACCOUNT · ORIGINATED_FROM_IP · USES_EMAIL · USES_URL</div>
+  <span class="tbl-badge bd-neo">Neo4j</span>
+  <div class="tbl-desc">Edges between Complaint nodes and entity nodes — the connections that reveal crime networks</div>
+</div>
+<div class="col-row col-hd"><div class="cc cc1">Property</div><div class="cc cc2">Type</div><div class="cc cc3">Index</div><div class="cc cc4">Description</div></div>
+<div class="col-row"><div class="cc cc1">extractedAt</div><div class="cc cc2">DateTime</div><div class="cc cc3">—</div><div class="cc cc4">When this relationship was created — matches complaint submission time</div></div>
+<div class="col-row"><div class="cc cc1">extractionMethod</div><div class="cc cc2">String</div><div class="cc cc3">—</div><div class="cc cc4">NLP_REGEX / ML_NER / VICTIM_INPUT</div></div>
+<div class="col-row"><div class="cc cc1">confidence</div><div class="cc cc2">Float</div><div class="cc cc3">—</div><div class="cc cc4">Extraction confidence — edges with low confidence shown as dashed lines in graph UI</div></div>
+</div>
+
+<div style="font-size:11px;color:var(--color-text-secondary);padding:8px 0 0;line-height:1.7;">
+  <strong style="color:var(--color-text-primary);">Key Cypher queries used by graph-service:</strong><br>
+  Find all complaints sharing a phone: <code style="font-size:10px;background:var(--color-background-secondary);padding:1px 4px;border-radius:3px;">MATCH (c:Complaint)-[:USES_PHONE]->(:Phone {value:$phone})<-[:USES_PHONE]-(other:Complaint) RETURN other</code><br>
+  Find hub suspects (linked to 5+ complaints): <code style="font-size:10px;background:var(--color-background-secondary);padding:1px 4px;border-radius:3px;">MATCH (e)-[r]->(c:Complaint) WITH e, count(r) AS cnt WHERE cnt >= 5 RETURN e ORDER BY cnt DESC</code><br>
+  2-hop network from a complaint: <code style="font-size:10px;background:var(--color-background-secondary);padding:1px 4px;border-radius:3px;">MATCH path = (c:Complaint {id:$id})-[*1..2]-(related) RETURN path LIMIT 200</code>
+</div>
+
+</div>
+
+<!-- WATERMELONDB -->
+<div id="dbp-wmdb" class="dbp">
+
+<div class="tbl-card">
+<div class="tbl-head">
+  <div class="tbl-name">complaint_drafts</div>
+  <span class="tbl-badge bd-wmdb">WatermelonDB</span>
+  <div class="tbl-desc">Offline complaint drafts on victim's device — persists across app restarts and crashes</div>
+</div>
+<div class="col-row col-hd"><div class="cc cc1">Column</div><div class="cc cc2">Type</div><div class="cc cc3">WDB Type</div><div class="cc cc4">Description</div></div>
+<div class="col-row"><div class="cc cc1">id <span class="key-pk">PK</span></div><div class="cc cc2">String</div><div class="cc cc3">auto</div><div class="cc cc4">WatermelonDB auto-generated ID</div></div>
+<div class="col-row"><div class="cc cc1">session_id</div><div class="cc cc2">String</div><div class="cc cc3">@field</div><div class="cc cc4">AI intake session ID — synced to server when online</div></div>
+<div class="col-row"><div class="cc cc1">crime_category</div><div class="cc cc2">String</div><div class="cc cc3">@field</div><div class="cc cc4">AI-classified category — updated as victim progresses through questions</div></div>
+<div class="col-row"><div class="cc cc1">confidence_score</div><div class="cc cc2">Number</div><div class="cc cc3">@field</div><div class="cc cc4">Classification confidence — shown to victim as reassurance of correct category</div></div>
+<div class="col-row"><div class="cc cc1">current_question_id</div><div class="cc cc2">String</div><div class="cc cc3">@field</div><div class="cc cc4">Which question victim is currently on — restores position if app crashes mid-flow</div></div>
+<div class="col-row"><div class="cc cc1">answers_json</div><div class="cc cc2">String</div><div class="cc cc3">@json</div><div class="cc cc4">All answers so far as JSON string — deserialized by @json decorator</div></div>
+<div class="col-row"><div class="cc cc1">evidence_files_json</div><div class="cc cc2">String</div><div class="cc cc3">@json</div><div class="cc cc4">Local file paths and hashes for evidence captured offline</div></div>
+<div class="col-row"><div class="cc cc1">status</div><div class="cc cc2">String</div><div class="cc cc3">@field</div><div class="cc cc4">draft / pending_upload / submitted / failed</div></div>
+<div class="col-row"><div class="cc cc1">created_at</div><div class="cc cc2">Number</div><div class="cc cc3">@date</div><div class="cc cc4">Unix timestamp — WatermelonDB requires number for dates</div></div>
+<div class="col-row"><div class="cc cc1">updated_at</div><div class="cc cc2">Number</div><div class="cc cc3">@date</div><div class="cc cc4">Last local update — WatermelonDB uses this for conflict resolution on sync</div></div>
+</div>
+
+<div class="tbl-card">
+<div class="tbl-head">
+  <div class="tbl-name">evidence_upload_queue</div>
+  <span class="tbl-badge bd-wmdb">WatermelonDB</span>
+  <div class="tbl-desc">Persistent evidence upload queue — files upload automatically when connectivity returns</div>
+</div>
+<div class="col-row col-hd"><div class="cc cc1">Column</div><div class="cc cc2">Type</div><div class="cc cc3">WDB Type</div><div class="cc cc4">Description</div></div>
+<div class="col-row"><div class="cc cc1">id <span class="key-pk">PK</span></div><div class="cc cc2">String</div><div class="cc cc3">auto</div><div class="cc cc4">Queue item identifier</div></div>
+<div class="col-row"><div class="cc cc1">file_id</div><div class="cc cc2">String</div><div class="cc cc3">@field</div><div class="cc cc4">UUID generated on device — matches file_id in PostgreSQL evidence_files table</div></div>
+<div class="col-row"><div class="cc cc1">complaint_id</div><div class="cc cc2">String</div><div class="cc cc3">@field</div><div class="cc cc4">Complaint this file belongs to</div></div>
+<div class="col-row"><div class="cc cc1">local_path</div><div class="cc cc2">String</div><div class="cc cc3">@field</div><div class="cc cc4">Absolute path on device filesystem — used by react-native-fs for upload</div></div>
+<div class="col-row"><div class="cc cc1">sha256_hash</div><div class="cc cc2">String</div><div class="cc cc3">@field</div><div class="cc cc4">SHA-256 hash computed at capture time — sent with upload for server-side verification</div></div>
+<div class="col-row"><div class="cc cc1">forensic_metadata_json</div><div class="cc cc2">String</div><div class="cc cc3">@json</div><div class="cc cc4">Full ForensicMetadata object — EXIF, device info, GPS, timestamp</div></div>
+<div class="col-row"><div class="cc cc1">upload_status</div><div class="cc cc2">String</div><div class="cc cc3">@field</div><div class="cc cc4">pending / uploading / uploaded / failed</div></div>
+<div class="col-row"><div class="cc cc1">retry_count</div><div class="cc cc2">Number</div><div class="cc cc3">@field</div><div class="cc cc4">Upload attempt count — stops retrying after 5 failures, marks as permanently_failed</div></div>
+<div class="col-row"><div class="cc cc1">upload_progress</div><div class="cc cc2">Number</div><div class="cc cc3">@field</div><div class="cc cc4">0–100 percentage — shown as progress bar in evidence upload UI</div></div>
+<div class="col-row"><div class="cc cc1">created_at</div><div class="cc cc2">Number</div><div class="cc cc3">@date</div><div class="cc cc4">When file was added to queue</div></div>
+</div>
+
+<div class="tbl-card">
+<div class="tbl-head">
+  <div class="tbl-name">cached_officer_complaints</div>
+  <span class="tbl-badge bd-wmdb">WatermelonDB</span>
+  <div class="tbl-desc">Officer app — assigned complaints cached for offline field investigation</div>
+</div>
+<div class="col-row col-hd"><div class="cc cc1">Column</div><div class="cc cc2">Type</div><div class="cc cc3">WDB Type</div><div class="cc cc4">Description</div></div>
+<div class="col-row"><div class="cc cc1">complaint_id</div><div class="cc cc2">String</div><div class="cc cc3">@field</div><div class="cc cc4">Server complaint UUID</div></div>
+<div class="col-row"><div class="cc cc1">complaint_json</div><div class="cc cc2">String</div><div class="cc cc3">@json</div><div class="cc cc4">Full complaint detail object — victim answers, entities, OSINT brief, FIR draft</div></div>
+<div class="col-row"><div class="cc cc1">priority_score</div><div class="cc cc2">Number</div><div class="cc cc3">@field</div><div class="cc cc4">Cached priority — used for offline queue sorting</div></div>
+<div class="col-row"><div class="cc cc1">checklist_progress_json</div><div class="cc cc2">String</div><div class="cc cc3">@json</div><div class="cc cc4">Officer's field investigation checklist completion state — persists offline</div></div>
+<div class="col-row"><div class="cc cc1">field_notes</div><div class="cc cc2">String</div><div class="cc cc3">@field</div><div class="cc cc4">Officer's free-text notes added during field visit — synced when online</div></div>
+<div class="col-row"><div class="cc cc1">cached_at</div><div class="cc cc2">Number</div><div class="cc cc3">@date</div><div class="cc cc4">When cache was last refreshed — stale after 24 hours, forces re-fetch</div></div>
+</div>
+
+</div>
+
+<!-- REDIS -->
+<div id="dbp-redis" class="dbp">
+
+<div class="tbl-card">
+<div class="tbl-head">
+  <div class="tbl-name">Redis Key Patterns</div>
+  <span class="tbl-badge bd-redis">Redis</span>
+  <div class="tbl-desc">Redis is used for three distinct purposes — each with its own key namespace and TTL strategy</div>
+</div>
+<div class="col-row col-hd"><div class="cc cc1">Key Pattern</div><div class="cc cc2">Value Type</div><div class="cc cc3">TTL</div><div class="cc cc4">Purpose and contents</div></div>
+
+<div class="col-row"><div class="cc cc1">session:{sessionId}</div><div class="cc cc2">Hash</div><div class="cc cc3">30 min</div><div class="cc cc4">Active complaint intake session — {crimeCategory, confidence, currentQuestionId, answersJson, lastActive}. Expires if victim abandons mid-flow</div></div>
+<div class="col-row"><div class="cc cc1">otp:{mobile}</div><div class="cc cc2">Hash</div><div class="cc cc3">10 min</div><div class="cc cc4">{otpHash, attemptCount, createdAt} — rate limiting layer before PostgreSQL hit</div></div>
+<div class="col-row"><div class="cc cc1">ratelimit:{ip}:{endpoint}</div><div class="cc cc2">Counter</div><div class="cc cc3">1 min</div><div class="cc cc4">Request count per IP per endpoint — Bucket4j integration via Spring Cloud Gateway</div></div>
+<div class="col-row"><div class="cc cc1">token:blacklist:{jti}</div><div class="cc cc2">String</div><div class="cc cc3">Token TTL</div><div class="cc cc4">Revoked JWT JTI claims — checked on every request to support force-logout</div></div>
+<div class="col-row"><div class="cc cc1">osint:{entityHash}</div><div class="cc cc2">Hash</div><div class="cc cc3">1 hour</div><div class="cc cc4">OSINT lookup result for a phone/UPI/URL — avoids hitting TAFCOP for same number 200 times in an hour</div></div>
+<div class="col-row"><div class="cc cc1">dash:national</div><div class="cc cc2">Hash</div><div class="cc cc3">No TTL</div><div class="cc cc4">Live national dashboard aggregates — {totalToday, totalByCategory, frozenToday, recoveredToday}. Updated atomically via HINCRBY on each new complaint</div></div>
+<div class="col-row"><div class="cc cc1">dash:state:{stateCode}</div><div class="cc cc2">Hash</div><div class="cc cc3">No TTL</div><div class="cc cc4">Per-state dashboard aggregates — same structure as national but scoped to one state</div></div>
+<div class="col-row"><div class="cc cc1">dash:trend:{category}:{date}</div><div class="cc cc2">Counter</div><div class="cc cc3">30 days</div><div class="cc cc4">Daily complaint count per crime category — used for 7-day trend analysis and emerging crime detection</div></div>
+<div class="col-row"><div class="cc cc1">officer:queue:{officerId}</div><div class="cc cc2">Sorted Set</div><div class="cc cc3">15 min</div><div class="cc cc4">Officer's complaint queue sorted by priority_score descending — refreshed on new assignment or score change</div></div>
+<div class="col-row"><div class="cc cc1">freeze:status:{complaintId}</div><div class="cc cc2">String</div><div class="cc cc3">24 hours</div><div class="cc cc4">Latest CFCFRMS freeze status — polled every 15 seconds by victim app. Avoids PostgreSQL query on every victim check</div></div>
+<div class="col-row"><div class="cc cc1">dis:node:{nodeHostname}</div><div class="cc cc2">Hash</div><div class="cc cc3">5 min</div><div class="cc cc4">Latest DIS telemetry and anomaly score per Kubernetes node — powers DIS Monitor screen with sub-second freshness</div></div>
+</div>
+
+</div>
+
+<script>
+function dbt(name){
+  ['pg1','pg2','pg3','neo','wmdb','redis'].forEach((n,i)=>{
+    document.getElementById('dbp-'+n).classList.toggle('active',n===name);
+    document.querySelectorAll('.dbt')[i].classList.toggle('active',n===name);
+  });
+}
+</script>
+</div>

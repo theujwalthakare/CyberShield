@@ -1,14 +1,36 @@
 "use client";
 
-import { useTheme } from "next-themes";
-import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { mappls as MapplsSdk } from "mappls-web-maps";
 
 interface GeographyData {
   state: string;
   total_cases: number;
   total_financial_loss: number;
 }
+
+type MapInstance = {
+  on?: (eventName: string, callback: () => void) => void;
+  addListener?: (eventName: string, callback: () => void) => void;
+  remove?: () => void;
+};
+
+type MarkerInstance = {
+  remove?: () => void;
+};
+
+type MapplsClient = {
+  initialize: (
+    token: string,
+    loadObject: Record<string, unknown>,
+    callback: () => void
+  ) => void;
+  Map: (options: {
+    id: string;
+    properties: Record<string, unknown>;
+  }) => MapInstance;
+  marker: (options: Record<string, unknown>) => MarkerInstance;
+};
 
 // Map Indian Cities to Lat/Lng for visualization
 const stateCoordinates: Record<string, [number, number]> = {
@@ -24,70 +46,195 @@ const stateCoordinates: Record<string, [number, number]> = {
   "Chennai": [13.0827, 80.2707],
 };
 
-export default function IntelligenceMap({ geography }: { geography: GeographyData[] }) {
-  const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === "dark";
+const INDIA_CENTER: [number, number] = [22.5937, 78.9629];
+const MAP_CONTAINER_ID = "intelligence-mappls-map";
 
-  const DEFAULT_CENTER: [number, number] = [22.5937, 78.9629];
-  
-  // Find max cases to normalize radius
-  const maxCases = geography.length > 0 ? Math.max(...geography.map(g => g.total_cases)) : 1;
+export default function IntelligenceMap({ geography }: { geography: GeographyData[] }) {
+  const mapplsClientRef = useRef<MapplsClient | null>(null);
+  const mapRef = useRef<MapInstance | null>(null);
+  const markersRef = useRef<MarkerInstance[]>([]);
+  const [mapReady, setMapReady] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
+
+  const mapplsApiKey =
+    process.env.NEXT_PUBLIC_MAPPLS_MAP_KEY ||
+    process.env.NEXT_PUBLIC_MAPMYINDIA_MAP_KEY ||
+    process.env.NEXT_PUBLIC_MAPPLS_STATIC_KEY ||
+    process.env.NEXT_PUBLIC_MAPMYINDIA_STATIC_KEY ||
+    "";
+
+  const maxCases = useMemo(
+    () =>
+      geography.length > 0
+        ? Math.max(...geography.map((point) => point.total_cases))
+        : 1,
+    [geography]
+  );
 
   const fmt = (n: number) => new Intl.NumberFormat("en-IN").format(n);
 
-  return (
-    <MapContainer
-      center={DEFAULT_CENTER}
-      zoom={4}
-      scrollWheelZoom={true}
-      className="h-[400px] w-full rounded-xl z-0"
-    >
-      <TileLayer
-        key={isDark ? "dark" : "light"}
-        attribution='&copy; <a href="https://carto.com/attributions">CARTO</a>'
-        url={isDark 
-          ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-          : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-        }
-      />
+  useEffect(() => {
+    let cancelled = false;
 
-      {geography.map((geo) => {
-        const coords = stateCoordinates[geo.state];
-        if (!coords) return null;
-        
-        // Calculate relative size (minimum 6, maximum 35)
-        const radius = Math.max(6, Math.min(35, (geo.total_cases / maxCases) * 35));
-        
-        return (
-          <CircleMarker
-            key={geo.state}
-            center={coords}
-            radius={radius}
-            pathOptions={{
-              color: isDark ? "#06b6d4" : "#0284c7",
-              fillColor: isDark ? "#06b6d4" : "#0284c7",
-              fillOpacity: 0.6,
-              weight: 2,
-            }}
-          >
-            <Popup>
-              <div className="p-2 min-w-[160px]">
-                <strong className="text-sm border-b pb-1 font-bold mb-2 block text-slate-800">{geo.state}</strong>
-                <div className="text-xs mt-2 flex flex-col gap-1.5">
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-500 font-medium">Total Cases:</span>
-                    <span className="font-bold text-rose-500">{fmt(geo.total_cases)}</span>
-                  </div>
-                  <div className="flex justify-between items-center gap-4 border-t pt-1 mt-1 border-slate-100 dark:border-slate-700">
-                    <span className="text-slate-500 font-medium whitespace-nowrap">Financial Impact:</span>
-                    <span className="font-bold text-rose-500">₹{fmt(geo.total_financial_loss)}</span>
-                  </div>
-                </div>
-              </div>
-            </Popup>
-          </CircleMarker>
+    async function initMap() {
+      if (!mapplsApiKey) {
+        setMapError(
+          "Map is unavailable. Add NEXT_PUBLIC_MAPPLS_STATIC_KEY (or NEXT_PUBLIC_MAPMYINDIA_STATIC_KEY) to frontend environment variables."
         );
-      })}
-    </MapContainer>
+        return;
+      }
+
+      try {
+        const mapplsClient = new MapplsSdk() as unknown as MapplsClient;
+        mapplsClientRef.current = mapplsClient;
+
+        const loadObject = {
+          map: true,
+          layer: "vector",
+          version: "3.0",
+        };
+
+        // initialize() loads required map scripts from Mappls endpoints using the API key.
+        await new Promise<void>((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            reject(new Error("Mappls initialization timeout"));
+          }, 10000);
+
+          try {
+            mapplsClient.initialize(mapplsApiKey, loadObject, () => {
+              clearTimeout(timeout);
+              resolve();
+            });
+          } catch (error) {
+            clearTimeout(timeout);
+            reject(error);
+          }
+        });
+
+        if (cancelled) {
+          return;
+        }
+
+        const mapObject = mapplsClient.Map({
+          id: MAP_CONTAINER_ID,
+          properties: {
+            center: INDIA_CENTER,
+            zoom: 4,
+            geolocation: false,
+            zoomControl: true,
+            clickableIcons: true,
+          },
+        });
+
+        mapRef.current = mapObject;
+
+        const onLoad = () => {
+          if (!cancelled) {
+            setMapReady(true);
+            setMapError(null);
+          }
+        };
+
+        if (typeof mapObject.on === "function") {
+          mapObject.on("load", onLoad);
+        } else if (typeof mapObject.addListener === "function") {
+          mapObject.addListener("load", onLoad);
+        } else {
+          onLoad();
+        }
+
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        setMapError(
+          `Unable to initialize Mappls map: ${errorMsg}`
+        );
+      }
+    }
+
+    void initMap();
+
+    return () => {
+      cancelled = true;
+      markersRef.current.forEach((marker) => marker.remove?.());
+      markersRef.current = [];
+      mapRef.current?.remove?.();
+      mapRef.current = null;
+      mapplsClientRef.current = null;
+      setMapReady(false);
+    };
+  }, [mapplsApiKey]);
+
+  useEffect(() => {
+    if (!mapReady || !mapRef.current) {
+      return;
+    }
+
+    const mapplsClient = mapplsClientRef.current;
+    if (!mapplsClient) {
+      return;
+    }
+
+    markersRef.current.forEach((marker) => marker.remove?.());
+    markersRef.current = [];
+
+    geography.forEach((geo) => {
+      const coords = stateCoordinates[geo.state];
+      if (!coords) {
+        return;
+      }
+
+      const markerScale = Math.max(
+        14,
+        Math.min(36, (geo.total_cases / maxCases) * 36)
+      );
+
+      const popupHtml = `
+        <div style="min-width:170px;padding:8px 10px;font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
+          <div style="font-weight:700;font-size:13px;margin-bottom:8px;border-bottom:1px solid #e2e8f0;padding-bottom:4px;">${geo.state}</div>
+          <div style="font-size:12px;display:flex;justify-content:space-between;gap:12px;margin-bottom:6px;">
+            <span style="color:#64748b;">Total Cases</span>
+            <span style="font-weight:700;color:#e11d48;">${fmt(geo.total_cases)}</span>
+          </div>
+          <div style="font-size:12px;display:flex;justify-content:space-between;gap:12px;">
+            <span style="color:#64748b;">Financial Impact</span>
+            <span style="font-weight:700;color:#e11d48;">INR ${fmt(geo.total_financial_loss)}</span>
+          </div>
+        </div>
+      `;
+
+      try {
+        const marker = mapplsClient.marker({
+          map: mapRef.current,
+          position: { lat: coords[0], lng: coords[1] },
+          popupHtml,
+          width: markerScale,
+          height: markerScale,
+        });
+        if (marker) {
+          markersRef.current.push(marker);
+        }
+      } catch (error) {
+        console.error("Failed to create Mappls marker", error);
+      }
+    });
+  }, [geography, mapReady, maxCases]);
+
+  if (mapError) {
+    return (
+      <div className="h-[400px] w-full rounded-xl border border-rose-300/40 bg-rose-50/60 dark:bg-rose-950/20 dark:border-rose-700/40 text-rose-700 dark:text-rose-300 flex items-center justify-center px-4 text-sm text-center">
+        {mapError}
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative h-[400px] w-full rounded-xl overflow-hidden z-0">
+      {!mapReady && (
+        <div className="absolute inset-0 flex items-center justify-center bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-300 text-sm z-10">
+          Loading Mappls Intelligence Map...
+        </div>
+      )}
+      <div id={MAP_CONTAINER_ID} className="h-full w-full" />
+    </div>
   );
 }

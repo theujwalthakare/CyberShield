@@ -19,9 +19,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Map as MapIcon } from "lucide-react";
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
+import { fetchRiskAreas } from "@/lib/api";
 
 // Lazy-load the map component to avoid SSR issues with Leaflet
 const ThreatMapView = dynamic(() => import("@/components/threat-map-view"), {
@@ -53,13 +51,8 @@ export default function ThreatMapPage() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch(`${API_BASE}/risk/areas`, {
-          cache: "no-store",
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setAreas(data.areas ?? []);
-        }
+        const data = await fetchRiskAreas();
+        setAreas(data);
       } catch {
         // silent
       } finally {

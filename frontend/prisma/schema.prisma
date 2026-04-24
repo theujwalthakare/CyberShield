@@ -1,0 +1,215 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+}
+
+enum UserRole {
+  citizen
+  officer
+  analyst
+  admin
+}
+
+enum SeverityLevel {
+  low
+  medium
+  high
+  critical
+}
+
+enum IncidentStatus {
+  reported
+  investigating
+  resolved
+}
+
+enum DifficultyLevel {
+  easy
+  medium
+  hard
+}
+
+model User {
+  userId           Int              @id @default(autoincrement()) @map("user_id")
+  fullName         String?          @map("full_name") @db.VarChar(255)
+  email            String           @unique @db.VarChar(255)
+  phone            String?          @db.VarChar(20)
+  passwordHash     String?          @map("password_hash") @db.VarChar(255)
+  role             UserRole         @default(citizen)
+  city             String?          @db.VarChar(120)
+  state            String?          @db.VarChar(120)
+  clerkSubject     String?          @unique @map("clerk_subject") @db.VarChar(255)
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  citizenProfile   CitizenProfile?
+  adminProfile     AdminProfile?
+  knowledgeBase    KnowledgeBase[]  @relation("KnowledgeCreatedBy")
+  incidents        Incident[]
+  quizAttempts     QuizAttempt[]
+  communityReports CommunityReport[]
+  activityLogs     ActivityLog[]
+
+  @@map("users")
+}
+
+model CitizenProfile {
+  profileId     Int      @id @default(autoincrement()) @map("profile_id")
+  userId        Int      @unique @map("user_id")
+  age           Int?
+  gender        String?  @db.VarChar(20)
+  occupation    String?  @db.VarChar(120)
+  literacyLevel String?  @map("literacy_level") @db.VarChar(80)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@map("citizen_profiles")
+}
+
+model AdminProfile {
+  adminId      Int      @id @default(autoincrement()) @map("admin_id")
+  userId       Int      @unique @map("user_id")
+  department   String?  @db.VarChar(120)
+  designation  String?  @db.VarChar(120)
+  accessLevel  Int      @default(1) @map("access_level")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@map("admin_profiles")
+}
+
+model KnowledgeBase {
+  kbId          Int            @id @default(autoincrement()) @map("kb_id")
+  title         String         @unique @db.VarChar(255)
+  attackType    String         @map("attack_type") @db.VarChar(120)
+  description   String?        @db.Text
+  precautions   String?        @db.Text
+  safetyTips    String?        @map("safety_tips") @db.Text
+  severityLevel SeverityLevel  @default(medium) @map("severity_level")
+  createdBy     Int?           @map("created_by")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  creator User? @relation("KnowledgeCreatedBy", fields: [createdBy], references: [userId], onDelete: SetNull)
+
+  @@map("knowledge_base")
+}
+
+model AttackCategory {
+  categoryId   Int     @id @default(autoincrement()) @map("category_id")
+  categoryName String  @unique @map("category_name") @db.VarChar(120)
+  description  String? @db.Text
+
+  @@map("attack_categories")
+}
+
+model IntelligenceReport {
+  reportId      Int      @id @default(autoincrement()) @map("report_id")
+  year          Int
+  day           DateTime @db.Date
+  amountLostInr Decimal  @map("amount_lost_inr") @db.Decimal(15, 2)
+  incidentType  String   @map("incident_type") @db.VarChar(120)
+  city          String   @db.VarChar(120)
+  category      String   @db.VarChar(120)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@unique([year, day, incidentType, city, category], map: "uq_intelligence_report_row")
+  @@map("intelligence_reports")
+}
+
+model Incident {
+  incidentId     Int            @id @default(autoincrement()) @map("incident_id")
+  userId         Int?           @map("user_id")
+  incidentType   String         @map("incident_type") @db.VarChar(120)
+  description    String?        @db.Text
+  amountLostInr  Decimal?       @map("amount_lost_inr") @db.Decimal(15, 2)
+  status         IncidentStatus @default(reported)
+  city           String?        @db.VarChar(120)
+  state          String?        @db.VarChar(120)
+  reportedAt     DateTime       @default(now()) @map("reported_at")
+
+  user User? @relation(fields: [userId], references: [userId], onDelete: SetNull)
+
+  @@map("incidents")
+}
+
+model Alert {
+  alertId   Int           @id @default(autoincrement()) @map("alert_id")
+  title     String        @db.VarChar(255)
+  message   String        @db.Text
+  severity  SeverityLevel @default(medium)
+  city      String?       @db.VarChar(120)
+  state     String?       @db.VarChar(120)
+  createdAt DateTime      @default(now()) @map("created_at")
+  expiresAt DateTime?     @map("expires_at")
+
+  @@map("alerts")
+}
+
+model QuizQuestion {
+  questionId      Int             @id @default(autoincrement()) @map("question_id")
+  questionText    String          @map("question_text") @db.Text
+  optionA         String          @map("option_a") @db.VarChar(500)
+  optionB         String          @map("option_b") @db.VarChar(500)
+  optionC         String          @map("option_c") @db.VarChar(500)
+  optionD         String          @map("option_d") @db.VarChar(500)
+  correctOption   String          @map("correct_option") @db.Char(1)
+  explanation     String?         @db.Text
+  difficultyLevel DifficultyLevel @default(easy) @map("difficulty_level")
+
+  @@map("quiz_questions")
+}
+
+model QuizAttempt {
+  attemptId      Int      @id @default(autoincrement()) @map("attempt_id")
+  userId         Int      @map("user_id")
+  score          Int
+  totalQuestions Int      @map("total_questions")
+  attemptedAt    DateTime @default(now()) @map("attempted_at")
+
+  user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@map("quiz_attempts")
+}
+
+model CommunityReport {
+  communityId Int      @id @default(autoincrement()) @map("community_id")
+  userId      Int      @map("user_id")
+  title       String   @db.VarChar(255)
+  description String   @db.Text
+  city        String?  @db.VarChar(120)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@map("community_reports")
+}
+
+model ScamSimulation {
+  simulationId  Int     @id @default(autoincrement()) @map("simulation_id")
+  scenarioText  String  @map("scenario_text") @db.Text
+  option1       String  @map("option_1") @db.VarChar(500)
+  option2       String  @map("option_2") @db.VarChar(500)
+  option3       String  @map("option_3") @db.VarChar(500)
+  correctOption Int     @map("correct_option")
+  outcomeText   String? @map("outcome_text") @db.Text
+
+  @@map("scam_simulations")
+}
+
+model ActivityLog {
+  logId       Int      @id @default(autoincrement()) @map("log_id")
+  userId      Int?     @map("user_id")
+  action      String   @db.VarChar(120)
+  description String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [userId], onDelete: SetNull)
+
+  @@map("activity_logs")
+}

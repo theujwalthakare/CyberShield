@@ -10,35 +10,23 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+import { fetchIncidents, fetchAlerts, fetchRiskAreas } from "@/lib/api";
 
 async function fetchDashboardData() {
   try {
-    const [incidentsRes, alertsRes, riskRes] = await Promise.all([
-      fetch(`${API}/api/v1/incidents`, { cache: "no-store" }),
-      fetch(`${API}/api/v1/alerts`, { cache: "no-store" }),
-      fetch(`${API}/api/v1/risk/areas`, { cache: "no-store" }),
+    const [incidents, alerts, riskAreas] = await Promise.all([
+      fetchIncidents(),
+      fetchAlerts(),
+      fetchRiskAreas(),
     ]);
-
-    const incidents = incidentsRes.ok ? await incidentsRes.json() : [];
-    const alertsData = alertsRes.ok ? await alertsRes.json() : { alerts: [] };
-    const riskData = riskRes.ok ? await riskRes.json() : { areas: [] };
 
     return {
       incidents: Array.isArray(incidents) ? incidents : [],
-      alerts: Array.isArray(alertsData.alerts)
-        ? alertsData.alerts
-        : Array.isArray(alertsData)
-          ? alertsData
-          : [],
-      riskAreas: Array.isArray(riskData.areas)
-        ? riskData.areas
-        : Array.isArray(riskData)
-          ? riskData
-          : [],
+      alerts: Array.isArray(alerts) ? alerts : [],
+      riskAreas: Array.isArray(riskAreas) ? riskAreas : [],
     };
-  } catch {
+  } catch (error) {
+    console.error("Error fetching dashboard data:", error);
     return { incidents: [], alerts: [], riskAreas: [] };
   }
 }

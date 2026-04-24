@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAuth } from "@clerk/nextjs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,9 +27,7 @@ import {
 } from "@/components/ui/select";
 import { Bell, CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
+import { acknowledgeAlertById, fetchAlerts } from "@/lib/api";
 
 interface AlertItem {
   id: number;
@@ -50,7 +47,6 @@ const severityColors: Record<string, string> = {
 };
 
 export default function AlertsPage() {
-  const { getToken } = useAuth();
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [severityFilter, setSeverityFilter] = useState("all");
@@ -63,16 +59,11 @@ export default function AlertsPage() {
   async function loadAlerts() {
     setLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (severityFilter && severityFilter !== "all")
-        params.set("severity", severityFilter);
-      const res = await fetch(`${API_BASE}/alerts?${params}`, {
-        cache: "no-store",
+      const data = await fetchAlerts({
+        severity: severityFilter !== "all" ? severityFilter : undefined,
+        limit: 100,
       });
-      if (res.ok) {
-        const data = await res.json();
-        setAlerts(data.alerts ?? []);
-      }
+      setAlerts(data as AlertItem[]);
     } catch {
       // silent
     } finally {
@@ -82,19 +73,13 @@ export default function AlertsPage() {
 
   async function acknowledgeAlert(id: number) {
     try {
-      const token = await getToken();
-      const res = await fetch(`${API_BASE}/alerts/${id}/ack`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        toast.success("Alert acknowledged");
-        setAlerts((prev) =>
-          prev.map((a) =>
-            a.id === id ? { ...a, status: "acknowledged" } : a
-          )
-        );
-      }
+      await acknowledgeAlertById(id);
+      toast.success("Alert acknowledged");
+      setAlerts((prev) =>
+        prev.map((a) =>
+          a.id === id ? { ...a, status: "acknowledged" } : a
+        )
+      );
     } catch {
       toast.error("Failed to acknowledge alert");
     }

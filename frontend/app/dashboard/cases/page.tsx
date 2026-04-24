@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAuth } from "@clerk/nextjs";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,48 +35,27 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { FileWarning, Loader2 } from "lucide-react";
 import Link from "next/link";
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
-
-interface CaseItem {
-  id: number;
-  case_number: string;
-  title: string;
-  crime_type: string;
-  status: string;
-  severity_score: number | null;
-  financial_loss: number;
-  currency: string;
-  created_at: string;
-  description: string;
-  affected_platform: string | null;
-  victim_area: string | null;
-  district: string | null;
-  state: string | null;
-  is_escalated: boolean;
-  assigned_officer_id: number | null;
-}
-
-interface OfficerItem {
-  id: number;
-  full_name: string;
-  email: string;
-  role: string;
-}
+import {
+  assignCaseToOfficer,
+  fetchAssignableOfficers,
+  fetchCaseGuidance,
+  fetchCases,
+  type CaseItem,
+  type OfficerItem,
+  updateCaseStatusInDb,
+} from "@/lib/api";
 
 const statusColors: Record<string, string> = {
-  submitted: "bg-blue-100 text-blue-800",
-  reviewing: "bg-yellow-100 text-yellow-800",
-  analysis_complete: "bg-purple-100 text-purple-800",
+  received: "bg-blue-100 text-blue-800",
+  classified: "bg-yellow-100 text-yellow-800",
+  freeze_requested: "bg-purple-100 text-purple-800",
   assigned: "bg-cyan-100 text-cyan-800",
-  investigating: "bg-orange-100 text-orange-800",
-  resolved: "bg-green-100 text-green-800",
-  closed: "bg-gray-100 text-gray-800",
+  investigation: "bg-orange-100 text-orange-800",
+  chargesheet: "bg-green-100 text-green-800",
+  verdict: "bg-gray-100 text-gray-800",
 };
 
 export default function CasesPage() {
-  const { getToken } = useAuth();
   const [cases, setCases] = useState<CaseItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -117,21 +95,13 @@ export default function CasesPage() {
   async function loadCases() {
     setLoading(true);
     try {
-      const token = await getToken();
-      const params = new URLSearchParams();
-      if (statusFilter && statusFilter !== "all") {
-        params.set("status", statusFilter);
-      }
-      params.set("sort_by", sortBy);
-      params.set("sort_order", sortOrder);
-
-      const res = await fetch(`${API_BASE}/cases?${params}`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const data = await fetchCases({
+        status: statusFilter,
+        sort_by: sortBy === "severity" ? "severity" : "created_at",
+        sort_order: sortOrder === "asc" ? "asc" : "desc",
+        limit: 200,
       });
-      if (res.ok) {
-        const data = await res.json();
-        setCases(Array.isArray(data) ? data : data.items ?? []);
-      }
+      setCases(data);
     } catch {
       // silent
     } finally {
@@ -141,41 +111,18 @@ export default function CasesPage() {
 
   async function loadOfficers() {
     try {
-      const token = await getToken();
-      const res = await fetch(`${API_BASE}/cases/officers`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (res.status === 403) {
-        setCanManageCases(false);
-        return;
-      }
-
-      if (!res.ok) {
-        return;
-      }
-
-      const data = await res.json();
-      setOfficers(data.items ?? []);
-      setCanManageCases(true);
+      const data = await fetchAssignableOfficers();
+      setOfficers(data);
+      setCanManageCases(data.length > 0);
     } catch {
       // silent
     }
   }
 
-  async function loadGuidance(caseId: number) {
+  async function loadGuidance(caseId: string) {
     try {
-      const token = await getToken();
-      const res = await fetch(`${API_BASE}/threats/case/${caseId}/guidance`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) {
-        setGuidance("");
-        return;
-      }
-
-      const data = await res.json();
-      setGuidance(data.guidance_text ?? "");
+      const text = await fetchCaseGuidance(caseId);
+      setGuidance(text);
     } catch {
       setGuidance("");
     }
@@ -185,22 +132,7 @@ export default function CasesPage() {
     if (!selectedCase) return;
     setActionLoading(true);
     try {
-      const token = await getToken();
-      const res = await fetch(`${API_BASE}/cases/${selectedCase.id}/status`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => null);
-        throw new Error(err?.detail ?? "Failed to update case status");
-      }
-
-      const updated = (await res.json()) as CaseItem;
+      const updated = await updateCaseStatusInDb(selectedCase.id, newStatus);
       setSelectedCase(updated);
       setCases((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
       toast.success("Case status updated");
@@ -215,22 +147,10 @@ export default function CasesPage() {
     if (!selectedCase || !selectedOfficerId) return;
     setActionLoading(true);
     try {
-      const token = await getToken();
-      const res = await fetch(`${API_BASE}/cases/${selectedCase.id}/assign`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ assigned_officer_id: Number(selectedOfficerId) }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => null);
-        throw new Error(err?.detail ?? "Failed to assign case");
-      }
-
-      const updated = (await res.json()) as CaseItem;
+      const updated = await assignCaseToOfficer(
+        selectedCase.id,
+        Number(selectedOfficerId)
+      );
       setSelectedCase(updated);
       setCases((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
       toast.success("Case assigned successfully");
@@ -265,12 +185,13 @@ export default function CasesPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="submitted">Submitted</SelectItem>
-            <SelectItem value="reviewing">Reviewing</SelectItem>
+            <SelectItem value="received">Received</SelectItem>
+            <SelectItem value="classified">Classified</SelectItem>
+            <SelectItem value="freeze_requested">Freeze Requested</SelectItem>
             <SelectItem value="assigned">Assigned</SelectItem>
-            <SelectItem value="investigating">Investigating</SelectItem>
-            <SelectItem value="resolved">Resolved</SelectItem>
-            <SelectItem value="closed">Closed</SelectItem>
+            <SelectItem value="investigation">Investigation</SelectItem>
+            <SelectItem value="chargesheet">Chargesheet</SelectItem>
+            <SelectItem value="verdict">Verdict</SelectItem>
           </SelectContent>
         </Select>
 
@@ -489,16 +410,16 @@ export default function CasesPage() {
                           size="sm"
                           variant="secondary"
                           disabled={actionLoading}
-                          onClick={() => updateCaseStatus("reviewing")}
+                          onClick={() => updateCaseStatus("classified")}
                         >
-                          Mark Reviewing
+                          Mark Classified
                         </Button>
                         <Button
                           type="button"
                           size="sm"
                           variant="secondary"
                           disabled={actionLoading}
-                          onClick={() => updateCaseStatus("investigating")}
+                          onClick={() => updateCaseStatus("investigation")}
                         >
                           Start Investigation
                         </Button>
@@ -507,18 +428,18 @@ export default function CasesPage() {
                           size="sm"
                           variant="secondary"
                           disabled={actionLoading}
-                          onClick={() => updateCaseStatus("resolved")}
+                          onClick={() => updateCaseStatus("chargesheet")}
                         >
-                          Mark Resolved
+                          Mark Chargesheet
                         </Button>
                         <Button
                           type="button"
                           size="sm"
                           variant="outline"
                           disabled={actionLoading}
-                          onClick={() => updateCaseStatus("closed")}
+                          onClick={() => updateCaseStatus("verdict")}
                         >
-                          Close Case
+                          Mark Verdict
                         </Button>
                       </div>
                     </div>

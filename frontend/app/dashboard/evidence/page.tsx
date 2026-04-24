@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useAuth } from "@clerk/nextjs";
 import { toast } from "sonner";
 import {
   Card,
@@ -15,12 +14,9 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Upload, FileUp, Loader2 } from "lucide-react";
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
+import { uploadEvidenceForCase } from "@/lib/api";
 
 export default function EvidencePage() {
-  const { getToken } = useAuth();
   const [caseNumber, setCaseNumber] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [annotation, setAnnotation] = useState("");
@@ -31,7 +27,7 @@ export default function EvidencePage() {
   async function handleUpload(e: React.FormEvent) {
     e.preventDefault();
     if (!file || !caseNumber) {
-      toast.error("Please provide a case number and select a file");
+      toast.error("Please provide a case ID and select a file");
       return;
     }
 
@@ -42,30 +38,18 @@ export default function EvidencePage() {
     await new Promise((r) => setTimeout(r, 1200));
     setUploadStep(3); // Hashing...
     await new Promise((r) => setTimeout(r, 800));
-    const fakeHash = Array.from({length:64}, () => Math.floor(Math.random()*16).toString(16)).join('');
-    setHash(fakeHash);
     setUploadStep(4); // Securing...
     await new Promise((r) => setTimeout(r, 500));
 
     try {
-      const token = await getToken();
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("case_number", caseNumber);
-      if (annotation) formData.append("annotation", annotation);
-
-      const res = await fetch(`${API_BASE}/evidence/upload`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
+      const result = await uploadEvidenceForCase({
+        caseId: caseNumber,
+        file,
+        annotation,
       });
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => null);
-        throw new Error(err?.detail ?? "Upload failed");
-      }
-
-      toast.success(`Evidence secured! SHA-256: ${fakeHash.substring(0,8)}...`);
+      setHash(result.hash);
+      toast.success(`Evidence secured! SHA-256: ${result.hash.substring(0, 8)}...`);
       setFile(null);
       setAnnotation("");
       setCaseNumber("");
@@ -100,10 +84,10 @@ export default function EvidencePage() {
         <CardContent>
           <form onSubmit={handleUpload} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="case_number">Case Number *</Label>
+              <Label htmlFor="case_number">Case ID *</Label>
               <Input
                 id="case_number"
-                placeholder="CS-xxxxxxxx"
+                placeholder="Paste case ID (UUID)"
                 value={caseNumber}
                 onChange={(e) => setCaseNumber(e.target.value)}
               />
@@ -190,7 +174,7 @@ export default function EvidencePage() {
           <p>• Do not alter or modify original evidence files before uploading.</p>
           <p>• Screenshots should clearly show timestamps and relevant content.</p>
           <p>• Each file is hashed (SHA-256) for integrity verification.</p>
-          <p>• Uploaded evidence is linked to the specified case number.</p>
+          <p>• Uploaded evidence is linked to the specified case ID.</p>
         </CardContent>
       </Card>
     </div>

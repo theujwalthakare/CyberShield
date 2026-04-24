@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@clerk/nextjs";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -25,9 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
+import { createCaseFromReport } from "@/lib/api";
 
 const crimeTypes = [
   "Phishing",
@@ -97,7 +94,6 @@ const resolver = zodResolver(formSchema);
 
 export default function ReportIncidentPage() {
   const router = useRouter();
-  const { getToken } = useAuth();
   const [submitting, setSubmitting] = useState(false);
 
   const {
@@ -125,30 +121,18 @@ export default function ReportIncidentPage() {
   async function onSubmit(data: Record<string, unknown>) {
     setSubmitting(true);
     try {
-      const token = await getToken();
-      const incidentDate = data.incident_date as string;
-      const body = {
-        ...data,
-        incident_date: incidentDate
-          ? new Date(incidentDate).toISOString()
-          : null,
-      };
-
-      const res = await fetch(`${API_BASE}/cases`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(body),
+      const created = await createCaseFromReport({
+        title: String(data.title ?? ""),
+        description: String(data.description ?? ""),
+        crime_type: String(data.crime_type ?? ""),
+        incident_date: data.incident_date ? String(data.incident_date) : undefined,
+        financial_loss: Number(data.financial_loss ?? 0),
+        affected_platform: data.affected_platform
+          ? String(data.affected_platform)
+          : undefined,
+        district: data.district ? String(data.district) : undefined,
+        state: data.state ? String(data.state) : undefined,
       });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => null);
-        throw new Error(err?.detail ?? "Failed to submit report");
-      }
-
-      const created = await res.json();
       toast.success(`Case ${created.case_number} created successfully`);
       router.push("/dashboard/cases");
     } catch (err) {
@@ -270,7 +254,7 @@ export default function ReportIncidentPage() {
                   type="number"
                   min={0}
                   step={0.01}
-                  {...register("financial_loss")}
+                  {...register("financial_loss", { valueAsNumber: true })}
                 />
               </div>
               <div className="space-y-2">

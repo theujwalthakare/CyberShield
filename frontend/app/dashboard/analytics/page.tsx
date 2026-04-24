@@ -24,9 +24,7 @@ import {
   AreaChart,
   CartesianGrid
 } from "recharts";
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
+import { fetchAnalyticsTrends, fetchAnalyticsLossSummary } from "@/lib/api";
 
 interface TrendsData {
   summary: {
@@ -72,14 +70,14 @@ export default function AnalyticsPage() {
   useEffect(() => {
     async function load() {
       try {
-        const [tRes, lRes] = await Promise.all([
-          fetch(`${API_BASE}/analytics/trends`, { cache: "no-store" }),
-          fetch(`${API_BASE}/analytics/loss-summary`, { cache: "no-store" }),
+        const [trendsData, lossData] = await Promise.all([
+          fetchAnalyticsTrends(),
+          fetchAnalyticsLossSummary(),
         ]);
-        if (tRes.ok) setTrends(await tRes.json());
-        if (lRes.ok) setLoss(await lRes.json());
-      } catch {
-        // silent
+        setTrends(trendsData);
+        setLoss(lossData);
+      } catch (error) {
+        console.error("Error loading analytics:", error);
       } finally {
         setLoading(false);
       }

@@ -30,7 +30,7 @@ const navItems = [
   { href: "/dashboard/report", label: "Report Incident", icon: FileWarning },
   { href: "/dashboard/cases", label: "My Cases", icon: Activity },
   { href: "/dashboard/evidence", label: "Evidence", icon: Upload },
-  { href: "/dashboard/map", label: "Threat Map", icon: Map },
+  // { href: "/dashboard/map", label: "Threat Map", icon: Map },
   { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/dashboard/intelligence", label: "Data Intelligence", icon: Database }, // Added Data Intelligence route
   { href: "/dashboard/alerts", label: "Alerts", icon: Bell },
