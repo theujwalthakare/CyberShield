@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Bell, CheckCircle2, Loader2 } from "lucide-react";
+import { Bell, ShieldCheck, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { acknowledgeAlertById, fetchAlerts } from "@/lib/api";
 
@@ -180,7 +180,7 @@ export default function AlertsPage() {
                           variant="ghost"
                           onClick={() => acknowledgeAlert(a.id)}
                         >
-                          <CheckCircle2 className="h-4 w-4" />
+                          <ShieldCheck className="h-4 w-4" />
                         </Button>
                       )}
                     </TableCell>

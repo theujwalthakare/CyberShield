@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+// import { auth } from "@clerk/nextjs/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -32,7 +32,7 @@ async function fetchDashboardData() {
 }
 
 export default async function DashboardPage() {
-  const { userId } = await auth();
+  const userId = null; // await auth();
   const { incidents, alerts, riskAreas } = await fetchDashboardData();
 
   const highRiskCount = riskAreas.filter(

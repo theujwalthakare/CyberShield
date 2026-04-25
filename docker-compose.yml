@@ -9,7 +9,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-cybershield}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cybershield}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${POSTGRES_PORT:-5433}:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
       - ./infra/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro

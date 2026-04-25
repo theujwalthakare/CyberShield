@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+// import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -12,9 +12,23 @@ import {
   BookOpen,
   ArrowRight,
   ShieldAlert,
-  Database
+  Database,
+  User,
+  LogOut,
+  LogIn
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import NavHeader from "@/components/ui/nav-header";
+import { Footer } from "@/components/footer";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuGroup,
+} from "@/components/ui/dropdown-menu";
 
 const features = [
   {
@@ -62,7 +76,7 @@ const features = [
 ];
 
 export default async function LandingPage() {
-  const { userId } = await auth();
+  const userId = null; // await auth();
   if (userId) redirect("/dashboard");
 
   return (
@@ -75,25 +89,66 @@ export default async function LandingPage() {
       {/* Header */}
       <header className="sticky top-0 z-50 w-full border-b border-slate-200/50 dark:border-slate-800/50 bg-white/60 dark:bg-slate-950/60 backdrop-blur-xl supports-[backdrop-filter]:bg-white/60">
         <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3 group cursor-pointer">
-            <div className="relative">
-              <div className="absolute -inset-1 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-xl blur opacity-25 group-hover:opacity-75 transition duration-500"></div>
-              <Image src="/logo.png" alt="CyberShield Nexus" width={40} height={40} className="relative rounded-xl shadow-md border border-slate-200 dark:border-slate-800" />
+          <div className="flex items-center gap-8">
+            <div className="flex items-center gap-3 group cursor-pointer">
+              <div className="relative">
+                <div className="absolute -inset-1 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-xl blur opacity-25 group-hover:opacity-75 transition duration-500"></div>
+                <Image src="/logo.png" alt="CyberShield Nexus" width={40} height={40} className="relative rounded-xl shadow-md border border-slate-200 dark:border-slate-800" />
+              </div>
+              <span className="text-xl sm:text-2xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-400">
+                CyberShield <span className="text-cyan-600 dark:text-cyan-400">Nexus</span>
+              </span>
             </div>
-            <span className="text-xl sm:text-2xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-400">
-              CyberShield <span className="text-cyan-600 dark:text-cyan-400">Nexus</span>
-            </span>
+            
+            {/* Navigation Links */}
+            <div className="hidden md:flex flex-1 items-center justify-center">
+              <NavHeader />
+            </div>
           </div>
+
           <div className="flex items-center gap-4 sm:gap-6">
             <ThemeToggle />
-            <Link href="/sign-in" className="hidden sm:block">
-              <Button variant="ghost" className="font-bold text-slate-600 dark:text-slate-300 hover:text-cyan-600 dark:hover:text-cyan-400 rounded-full">Sign In</Button>
-            </Link>
-            <Link href="/sign-up">
-              <Button className="font-bold bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-lg shadow-cyan-500/25 border-0 rounded-full px-6 sm:px-8 h-10 sm:h-12 w-full transition-all hover:scale-105">
-                Get Started <ArrowRight className="ml-2 w-4 h-4 hidden sm:block"/>
-              </Button>
-            </Link>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="rounded-full h-10 w-10 border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800">
+                  <User className="h-5 w-5 text-slate-700 dark:text-slate-300" />
+                  <span className="sr-only">Profile options</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/sign-in" className="cursor-pointer">
+                    <LogIn className="mr-2 h-4 w-4" />
+                    <span>Sign In</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/sign-up" className="cursor-pointer">
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Sign Up</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard/profile" className="cursor-pointer">
+                    <User className="mr-2 h-4 w-4" />
+                    <span>My Profile</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard" className="cursor-pointer">
+                    <Activity className="mr-2 h-4 w-4" />
+                    <span>View Dashboard</span>
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </header>
@@ -156,16 +211,67 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-950/50 backdrop-blur-xl py-12 text-center relative z-10">
-        <div className="flex items-center justify-center gap-2 mb-4 opacity-80">
-            <Shield className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
-            <span className="font-bold text-slate-800 dark:text-slate-200 tracking-wide">CyberShield Nexus</span>
+      {/* News Section */}
+      <section id="news" className="relative mx-auto max-w-7xl px-4 pb-32 sm:px-6 lg:px-8 z-10">
+        <div className="text-center mb-16">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white mb-4">
+              Latest Cyber News
+            </h2>
+            <div className="w-24 h-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 mx-auto rounded-full" />
         </div>
-        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
-            &copy; {new Date().getFullYear()} University Project. Secure Architecture.
-        </p>
-      </footer>
+        <div className="grid gap-6 sm:grid-cols-2">
+          {/* Mock News Item 1 */}
+          <Card className="border-slate-200/60 dark:border-slate-800/60 bg-white/60 dark:bg-slate-900/40 backdrop-blur-xl hover:-translate-y-1 transition duration-300">
+            <CardContent className="p-8">
+              <div className="text-xs text-cyan-600 dark:text-cyan-400 font-bold mb-3 uppercase tracking-wider">Security Alert</div>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-2">New Zero-Day Vulnerability Explolited in Popular Software</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mb-4 line-clamp-3">A critical vulnerability (CVSS 9.8) has been discovered, allowing unauthorized remote execution. Ensure your systems are patched immediately to mitigate this threat.</p>
+              <Link href="#" className="inline-flex items-center text-sm font-medium text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition-colors">
+                Read Full Advisory <ArrowRight className="ml-1 w-4 h-4" />
+              </Link>
+            </CardContent>
+          </Card>
+          {/* Mock News Item 2 */}
+          <Card className="border-slate-200/60 dark:border-slate-800/60 bg-white/60 dark:bg-slate-900/40 backdrop-blur-xl hover:-translate-y-1 transition duration-300">
+            <CardContent className="p-8">
+              <div className="text-xs text-cyan-600 dark:text-cyan-400 font-bold mb-3 uppercase tracking-wider">Industry Trend</div>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-2">Ransomware Attacks Surge by 40% in Q3</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mb-4 line-clamp-3">Recent data indicates a massive spike in targeted ransomware campaigns against healthcare and educational institutions. Review your organizational security posture.</p>
+              <Link href="#" className="inline-flex items-center text-sm font-medium text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition-colors">
+                Read Report <ArrowRight className="ml-1 w-4 h-4" />
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      {/* About Us Section */}
+      <section id="about" className="relative bg-slate-100 dark:bg-slate-900 border-y border-slate-200/50 dark:border-slate-800/50">
+        <div className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8 z-10 flex flex-col md:flex-row items-center gap-12">
+          <div className="flex-1 space-y-6">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs sm:text-sm font-bold uppercase tracking-wider">
+              Our Mission
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white">
+              Securing the Digital Frontier
+            </h2>
+            <p className="text-lg text-slate-600 dark:text-slate-400 leading-relaxed">
+              CyberShield Nexus was built with a singular vision: to bridge the gap between complex enterprise security intelligence and everyday users. We aim to democratize cyber-threat reporting, making it accessible, actionable, and integrated with global authorities.
+            </p>
+            <p className="text-lg text-slate-600 dark:text-slate-400 leading-relaxed">
+              By combining artificial intelligence with a crowdsourced threat reporting map, we empower both individuals and security teams to respond to incidents faster than ever before.
+            </p>
+          </div>
+          <div className="flex-1 relative">
+            <div className="aspect-video w-full rounded-2xl bg-gradient-to-tr from-cyan-500/20 to-blue-600/20 border border-slate-200 dark:border-slate-800 shadow-2xl flex items-center justify-center p-8 backdrop-blur-sm">
+                <ShieldAlert className="w-32 h-32 text-cyan-600/50 dark:text-cyan-400/50" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }
