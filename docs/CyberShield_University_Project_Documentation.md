@@ -172,7 +172,6 @@ flowchart TB
         direction LR
         CIT["🛡️ Citizen\nBrowser"]
         OFF["👮 Officer\nBrowser"]
-        ANL["📊 Analyst\nBrowser"]
         ADM["⚙️ Admin\nBrowser"]
     end
 
@@ -250,7 +249,7 @@ flowchart TB
     end
 
     %% Client connections
-    CIT & OFF & ANL & ADM --> VCL
+    CIT & OFF & ADM --> VCL
     VCL --> FRONTEND
     CIT & OFF & ANL & ADM --> CLK
     CLK --> JWKS

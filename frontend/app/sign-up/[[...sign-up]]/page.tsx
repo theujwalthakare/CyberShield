@@ -1,9 +1,21 @@
-import { SignUp } from "@clerk/nextjs";
+import { redirect } from "next/navigation";
 
-export default function SignUpPage() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50">
-      <SignUp afterSignOutUrl="/" />
-    </div>
-  );
+export default async function SignUpPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const query = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(params)) {
+    if (Array.isArray(value)) {
+      value.forEach((entry) => query.append(key, entry));
+    } else if (typeof value === "string") {
+      query.set(key, value);
+    }
+  }
+
+  const suffix = query.toString();
+  redirect(suffix ? `/sign-up/citizen?${suffix}` : "/sign-up/citizen");
 }

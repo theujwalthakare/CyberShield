@@ -2,16 +2,238 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color-scheme: dark;
-}
+/* Leaflet CSS */
+@import 'leaflet/dist/leaflet.css';
+@import 'react-leaflet-cluster/dist/assets/MarkerCluster.css';
+@import 'react-leaflet-cluster/dist/assets/MarkerCluster.Default.css';
 
-body {
-  @apply bg-slate-950 text-slate-50 antialiased;
+@layer base {
+  :root {
+    /* Theme tokens */
+    --card: 0 0% 100%;
+    --ring: 240 5% 84%;
+    --input: 240 5% 84%;
+    --muted: 240 5% 96%;
+    --accent: 240 5% 96%;
+    --border: 240 6% 90%;
+    --radius: 0.625rem;
+    --chart-1: 17 88% 48%;
+    --chart-2: 173 80% 30%;
+    --chart-3: 197 71% 24%;
+    --chart-4: 45 93% 58%;
+    --chart-5: 36 100% 50%;
+    --popover: 0 0% 100%;
+    --primary: 240 6% 10%;
+    --sidebar: 0 0% 98%;
+    --secondary: 240 5% 96%;
+    --background: 0 0% 100%;
+    --foreground: 240 10% 4%;
+    --destructive: 0 84% 60%;
+    --sidebar-ring: 240 5% 84%;
+    --sidebar-accent: 240 5% 96%;
+    --sidebar-border: 240 6% 90%;
+    --card-foreground: 240 10% 4%;
+    --sidebar-primary: 240 6% 10%;
+    --muted-foreground: 240 4% 46%;
+    --accent-foreground: 240 6% 10%;
+    --popover-foreground: 240 10% 4%;
+    --primary-foreground: 0 0% 98%;
+    --sidebar-foreground: 240 10% 4%;
+    --secondary-foreground: 240 6% 10%;
+    --destructive-foreground: 0 84% 60%;
+    --sidebar-accent-foreground: 240 6% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    /* Override Tailwind slate scale to match theme */
+    --slate-50: 240 5% 98%;
+    --slate-100: 240 5% 96%;
+    --slate-200: 240 6% 90%;
+    --slate-300: 240 5% 84%;
+    --slate-400: 240 4% 46%;
+    --slate-500: 240 4% 46%;
+    --slate-600: 240 6% 25%;
+    --slate-700: 240 6% 15%;
+    --slate-800: 240 6% 10%;
+    --slate-900: 240 10% 4%;
+    --slate-950: 240 10% 4%;
+
+    /* Override cyan scale for primary accent */
+    --cyan-50: 197 71% 95%;
+    --cyan-100: 197 71% 90%;
+    --cyan-200: 197 71% 80%;
+    --cyan-300: 197 71% 70%;
+    --cyan-400: 173 80% 40%;
+    --cyan-500: 173 80% 30%;
+    --cyan-600: 173 80% 30%;
+    --cyan-700: 197 71% 24%;
+    --cyan-800: 197 71% 20%;
+    --cyan-900: 197 71% 15%;
+    --cyan-950: 197 71% 10%;
+
+    /* Override blue scale */
+    --blue-400: 217 91% 60%;
+    --blue-500: 217 91% 60%;
+    --blue-600: 217 91% 60%;
+
+    /* Override emerald scale */
+    --emerald-400: 173 80% 40%;
+    --emerald-500: 173 80% 30%;
+    --emerald-600: 173 80% 30%;
+
+    /* Override amber/orange scale */
+    --amber-400: 45 93% 58%;
+    --amber-500: 36 100% 50%;
+    --orange-500: 17 88% 48%;
+    --orange-600: 17 88% 48%;
+
+    /* Override rose/red scale */
+    --rose-200: 0 84% 90%;
+    --rose-500: 0 84% 60%;
+    --rose-600: 0 84% 60%;
+    --red-500: 0 84% 60%;
+    --red-600: 0 84% 60%;
+
+    /* Override violet/purple scale */
+    --violet-400: 258 90% 66%;
+    --violet-500: 258 90% 66%;
+    --violet-600: 258 90% 66%;
+    --purple-500: 258 90% 66%;
+  }
+
+  .dark {
+    /* Theme tokens */
+    --card: 240 10% 4%;
+    --ring: 240 4% 33%;
+    --input: 240 6% 15%;
+    --muted: 240 6% 10%;
+    --accent: 240 6% 10%;
+    --border: 240 6% 15%;
+    --radius: 0.625rem;
+    --chart-1: 217 91% 60%;
+    --chart-2: 160 84% 39%;
+    --chart-3: 36 100% 50%;
+    --chart-4: 258 90% 66%;
+    --chart-5: 347 77% 50%;
+    --popover: 240 10% 4%;
+    --primary: 0 0% 98%;
+    --sidebar: 240 6% 9%;
+    --secondary: 240 6% 15%;
+    --background: 240 10% 4%;
+    --foreground: 0 0% 98%;
+    --destructive: 0 63% 31%;
+    --sidebar-ring: 240 4% 33%;
+    --sidebar-accent: 240 5% 15%;
+    --sidebar-border: 240 6% 15%;
+    --card-foreground: 0 0% 98%;
+    --sidebar-primary: 217 91% 60%;
+    --muted-foreground: 240 5% 65%;
+    --accent-foreground: 0 0% 98%;
+    --popover-foreground: 0 0% 98%;
+    --primary-foreground: 240 6% 10%;
+    --sidebar-foreground: 0 0% 98%;
+    --secondary-foreground: 0 0% 98%;
+    --destructive-foreground: 0 84% 60%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    /* Override Tailwind slate scale for dark mode */
+    --slate-50: 240 6% 9%;
+    --slate-100: 240 6% 10%;
+    --slate-200: 240 6% 15%;
+    --slate-300: 240 4% 33%;
+    --slate-400: 240 5% 65%;
+    --slate-500: 240 5% 65%;
+    --slate-600: 240 5% 84%;
+    --slate-700: 240 5% 90%;
+    --slate-800: 240 5% 96%;
+    --slate-900: 0 0% 98%;
+    --slate-950: 0 0% 98%;
+
+    /* Override cyan scale for dark mode */
+    --cyan-200: 173 80% 70%;
+    --cyan-300: 173 80% 60%;
+    --cyan-400: 173 80% 50%;
+    --cyan-500: 173 80% 40%;
+    --cyan-600: 173 80% 40%;
+
+    /* Override blue scale for dark mode */
+    --blue-400: 217 91% 70%;
+    --blue-500: 217 91% 60%;
+    --blue-600: 217 91% 60%;
+
+    /* Override emerald scale for dark mode */
+    --emerald-300: 160 84% 50%;
+    --emerald-400: 160 84% 45%;
+    --emerald-500: 160 84% 39%;
+    --emerald-600: 160 84% 39%;
+
+    /* Override amber/orange scale for dark mode */
+    --amber-400: 45 93% 65%;
+    --amber-500: 36 100% 60%;
+    --orange-500: 17 88% 55%;
+    --orange-600: 17 88% 55%;
+
+    /* Override rose/red scale for dark mode */
+    --rose-200: 0 84% 80%;
+    --rose-500: 0 84% 70%;
+    --rose-600: 0 84% 70%;
+    --red-500: 0 84% 60%;
+    --red-600: 0 84% 60%;
+
+    /* Override violet/purple scale for dark mode */
+    --violet-300: 258 90% 75%;
+    --violet-400: 258 90% 70%;
+    --violet-500: 258 90% 66%;
+    --violet-600: 258 90% 66%;
+    --purple-500: 258 90% 66%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', 'Noto Sans', sans-serif;
+  }
 }
 
 @layer components {
   .glass-panel {
-    @apply bg-slate-900/60 backdrop-blur-md border border-slate-700/50 shadow-xl rounded-xl;
+    @apply bg-card/60 backdrop-blur-md border border-border shadow-xl rounded-xl;
   }
+}
+
+/* Custom animations */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes blob {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+}
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
 }

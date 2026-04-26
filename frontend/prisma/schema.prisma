@@ -41,7 +41,7 @@ model User {
   role             UserRole         @default(citizen)
   city             String?          @db.VarChar(120)
   state            String?          @db.VarChar(120)
-  clerkSubject     String?          @unique @map("clerk_subject") @db.VarChar(255)
+  authSubject      String?          @unique @map("auth_subject") @db.VarChar(255)
   createdAt        DateTime         @default(now()) @map("created_at")
   updatedAt        DateTime         @updatedAt @map("updated_at")
 

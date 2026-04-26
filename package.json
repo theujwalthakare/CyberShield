@@ -1,5 +1,5 @@
 {
   "dependencies": {
-    "@clerk/themes": "^2.4.57"
+    "framer-motion": "^12.38.0"
   }
 }

@@ -945,20 +945,33 @@ export async function assignCaseToOfficer(
 }
 
 export async function createCaseFromReport(
-  payload: ReportCaseInput
+  payload: ReportCaseInput & { authSubject?: string }
 ): Promise<{ case_number: string }> {
-  const { data: citizens, error: citizenError } = await supabase
-    .from("citizens")
-    .select("citizen_id")
-    .order("created_at", { ascending: true })
-    .order("citizen_id", { ascending: true })
-    .limit(1);
+  // Resolve victim_id from the logged-in user's citizen_id via user_profiles
+  let victimId: string | null = null;
 
-  if (citizenError) throw citizenError;
+  if (payload.authSubject) {
+    const { data: profile } = await supabase
+      .from("user_profiles")
+      .select("citizen_id")
+      .eq("auth_subject", payload.authSubject)
+      .maybeSingle();
+    victimId = profile?.citizen_id ?? null;
+  }
 
-  const victimId = citizens?.[0]?.citizen_id;
+  // Fallback: first available citizen (for officer/admin submitting on behalf)
   if (!victimId) {
-    throw new Error("No citizen records available");
+    const { data: citizens, error: citizenError } = await supabase
+      .from("citizens")
+      .select("citizen_id")
+      .order("created_at", { ascending: true })
+      .limit(1);
+    if (citizenError) throw citizenError;
+    victimId = citizens?.[0]?.citizen_id ?? null;
+  }
+
+  if (!victimId) {
+    throw new Error("No citizen record found. Please complete your profile.");
   }
 
   const complaintId = crypto.randomUUID();

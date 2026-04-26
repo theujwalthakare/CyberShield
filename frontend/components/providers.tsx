@@ -1,6 +1,5 @@
 "use client";
 
-// import { ClerkProvider } from "@clerk/nextjs";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "next-themes";
@@ -20,13 +19,11 @@ export function Providers({ children }: { children: ReactNode }) {
   );
 
   return (
-    // <ClerkProvider>
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
-          {children}
-          <Toaster position="top-right" richColors />
-        </ThemeProvider>
-      </QueryClientProvider>
-    // </ClerkProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+        {children}
+        <Toaster position="top-right" richColors />
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 }

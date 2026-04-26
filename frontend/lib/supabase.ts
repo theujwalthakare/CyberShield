@@ -1,15 +1,8 @@
-import { createClient } from "@supabase/supabase-js";
+import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY || "";
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error(
-    "Missing Supabase URL or publishable key in environment variables"
-  );
-}
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Re-export the singleton browser client so lib/api.ts and other
+// client-side modules share one GoTrueClient instance.
+export const supabase = getSupabaseBrowserClient();
 
 // Query helpers for common operations
 export async function queryIntelligence(query: {
