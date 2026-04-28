@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
   Shield, LayoutDashboard, FileWarning, ListChecks,
-  LogOut, Menu, ChevronRight, UserCircle2,
+  LogOut, Menu, ChevronRight, UserCircle2, BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
@@ -13,9 +13,10 @@ import { useUserProfile } from "@/lib/use-user-profile";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 const navItems = [
-  { href: "/citizen/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/citizen/dashboard",      label: "Dashboard",      icon: LayoutDashboard },
   { href: "/citizen/file-complaint", label: "File Complaint", icon: FileWarning },
-  { href: "/citizen/my-complaints", label: "My Complaints", icon: ListChecks },
+  { href: "/citizen/my-complaints",  label: "My Complaints",  icon: ListChecks },
+  { href: "/citizen/knowledge-base", label: "Knowledge Base", icon: BookOpen },
 ];
 
 export default function CitizenLayoutClient({ children }: { children: React.ReactNode }) {

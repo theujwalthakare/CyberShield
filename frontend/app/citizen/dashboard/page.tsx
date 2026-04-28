@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { FileWarning, ListChecks, ShieldCheck, Clock, ChevronRight, Loader2 } from "lucide-react";
+import { FileWarning, ListChecks, ShieldCheck, Clock, ChevronRight, Loader2, BookOpen } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
+import { ensureCitizenProfile } from "@/lib/api";
 import { toast } from "sonner";
 
 type Complaint = {
@@ -51,6 +52,11 @@ export default function CitizenDashboard() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
+      // Silently provision citizen record on first visit
+      const supabase = getSupabaseBrowserClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) await ensureCitizenProfile(user.id).catch(() => null);
+
       const data = await getCitizenComplaints(10);
       setComplaints(data);
     } catch (err) {
@@ -100,11 +106,11 @@ export default function CitizenDashboard() {
           </div>
           <ChevronRight className="w-4 h-4 text-white ml-auto" />
         </Link>
-        <Link href="/citizen/my-complaints" className="group flex items-center gap-4 p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm hover:shadow-md transition-all">
-          <ListChecks className="w-6 h-6 text-slate-500 dark:text-slate-400 shrink-0" />
+        <Link href="/citizen/knowledge-base" className="group flex items-center gap-4 p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm hover:shadow-md transition-all">
+          <BookOpen className="w-6 h-6 text-slate-500 dark:text-slate-400 shrink-0" />
           <div>
-            <p className="text-sm font-bold text-slate-900 dark:text-white">View My Complaints</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Track status and updates</p>
+            <p className="text-sm font-bold text-slate-900 dark:text-white">Knowledge Base</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Learn about cyber threats</p>
           </div>
           <ChevronRight className="w-4 h-4 text-slate-400 ml-auto" />
         </Link>

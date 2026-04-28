@@ -1,0 +1,61 @@
+{
+  "accuracy": 1.0,
+  "classification_report": {
+    "low": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 19.0
+    },
+    "medium": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 181.0
+    },
+    "accuracy": 1.0,
+    "macro avg": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 200.0
+    },
+    "weighted avg": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 200.0
+    }
+  },
+  "feature_cols": [
+    "incident_type_enc",
+    "city_enc",
+    "month",
+    "day_of_week",
+    "amount_lost_inr",
+    "incident_density",
+    "year"
+  ],
+  "risk_thresholds": [
+    [
+      0,
+      50000,
+      "low"
+    ],
+    [
+      50000,
+      500000,
+      "medium"
+    ],
+    [
+      500000,
+      2000000,
+      "high"
+    ],
+    [
+      2000000,
+      100000000,
+      "critical"
+    ]
+  ]
+}

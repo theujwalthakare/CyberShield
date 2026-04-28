@@ -117,6 +117,14 @@ interface RiskData {
   projected_cases: number;
 }
 
+function logError(context: string, error: unknown) {
+  if (error && typeof error === "object" && "message" in error) {
+    console.error(`${context}:`, (error as any).message, (error as any).details ?? "");
+  } else {
+    console.error(`${context}:`, error);
+  }
+}
+
 const ALLOWED_CASE_STATUSES = new Set([
   "RECEIVED",
   "CLASSIFIED",
@@ -944,35 +952,41 @@ export async function assignCaseToOfficer(
   return updated;
 }
 
+// Ensures a citizen row + user_profile exists for the logged-in user.
+// Calls the Postgres SECURITY DEFINER function which is idempotent.
+export async function ensureCitizenProfile(authSubject: string): Promise<string> {
+  // First check if already provisioned
+  const { data: profile } = await supabase
+    .from("user_profiles")
+    .select("citizen_id")
+    .eq("auth_subject", authSubject)
+    .maybeSingle();
+
+  if (profile?.citizen_id) return profile.citizen_id;
+
+  // Get user email from auth
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // Call the DB function to provision
+  const { data, error } = await supabase.rpc("provision_citizen_profile", {
+    p_auth_subject: authSubject,
+    p_email:        user?.email        ?? null,
+    p_full_name:    user?.user_metadata?.full_name ?? user?.user_metadata?.name ?? null,
+    p_phone:        user?.user_metadata?.phone     ?? null,
+  });
+
+  if (error) throw new Error(`Failed to provision citizen profile: ${error.message}`);
+  if (!data)  throw new Error("Citizen provisioning returned no ID.");
+  return data as string;
+}
+
 export async function createCaseFromReport(
   payload: ReportCaseInput & { authSubject?: string }
 ): Promise<{ case_number: string }> {
-  // Resolve victim_id from the logged-in user's citizen_id via user_profiles
-  let victimId: string | null = null;
+  if (!payload.authSubject) throw new Error("Not authenticated.");
 
-  if (payload.authSubject) {
-    const { data: profile } = await supabase
-      .from("user_profiles")
-      .select("citizen_id")
-      .eq("auth_subject", payload.authSubject)
-      .maybeSingle();
-    victimId = profile?.citizen_id ?? null;
-  }
-
-  // Fallback: first available citizen (for officer/admin submitting on behalf)
-  if (!victimId) {
-    const { data: citizens, error: citizenError } = await supabase
-      .from("citizens")
-      .select("citizen_id")
-      .order("created_at", { ascending: true })
-      .limit(1);
-    if (citizenError) throw citizenError;
-    victimId = citizens?.[0]?.citizen_id ?? null;
-  }
-
-  if (!victimId) {
-    throw new Error("No citizen record found. Please complete your profile.");
-  }
+  // Auto-provision citizen record if it doesn't exist yet
+  const victimId = await ensureCitizenProfile(payload.authSubject);
 
   const complaintId = crypto.randomUUID();
   const sessionSeed = crypto.randomUUID().replace(/-/g, "");

@@ -53,6 +53,17 @@ export async function GET(request: NextRequest) {
     });
   }
 
+  // For citizen role: ensure citizens row + citizen_id link exists
+  // Covers both new signups and existing users with citizen_id = NULL
+  if (effectiveRole === "citizen") {
+    await supabase.rpc("provision_citizen_profile", {
+      p_auth_subject: user.id,
+      p_email:        user.email        ?? null,
+      p_full_name:    user.user_metadata?.full_name ?? user.user_metadata?.name ?? null,
+      p_phone:        user.user_metadata?.phone     ?? null,
+    });
+  }
+
   // Redirect to the role's actual home (use DB role if already registered)
   const destination = `${origin}${getRoleHomePath(effectiveRole)}`;
   response.headers.set("location", destination);

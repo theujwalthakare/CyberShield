@@ -237,3 +237,79 @@
 .animation-delay-4000 {
   animation-delay: 4s;
 }
+
+/* Streaming cursor blink */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+.streaming-cursor {
+  display: inline-block;
+  animation: blink 0.8s step-start infinite;
+}
+
+/* Markdown code block scrollbar */
+.custom-scrollbar::-webkit-scrollbar { height: 4px; width: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 2px; }
+
+/* ── SiriOrb ─────────────────────────────────────────────── */
+@property --siri-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.siri-orb {
+  display: grid;
+  grid-template-areas: "stack";
+  overflow: hidden;
+  border-radius: 50%;
+  position: relative;
+  background: radial-gradient(circle, rgba(0,0,0,0.06) 0%, transparent 70%);
+}
+.dark .siri-orb {
+  background: radial-gradient(circle, rgba(255,255,255,0.06) 0%, transparent 70%);
+}
+.siri-orb::before {
+  content: "";
+  display: block;
+  grid-area: stack;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background:
+    conic-gradient(from calc(var(--siri-angle) * 1.2) at 30% 65%, oklch(75% 0.18 200) 0deg, transparent 45deg 315deg, oklch(75% 0.18 200) 360deg),
+    conic-gradient(from calc(var(--siri-angle) * 0.8) at 70% 35%, oklch(80% 0.15 180) 0deg, transparent 60deg 300deg, oklch(80% 0.15 180) 360deg),
+    conic-gradient(from calc(var(--siri-angle) * -1.5) at 65% 75%, oklch(72% 0.2 210) 0deg, transparent 90deg 270deg, oklch(72% 0.2 210) 360deg),
+    radial-gradient(ellipse 120% 80% at 40% 60%, oklch(78% 0.16 195) 0%, transparent 50%);
+  filter: blur(var(--siri-blur, 8px)) contrast(var(--siri-contrast, 1.8)) saturate(1.4);
+  animation: siri-rotate var(--siri-duration, 8s) linear infinite;
+  will-change: transform;
+}
+.siri-orb::after {
+  content: "";
+  display: block;
+  grid-area: stack;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 45% 55%, rgba(255,255,255,0.12) 0%, transparent 60%);
+  mix-blend-mode: overlay;
+}
+@keyframes siri-rotate {
+  from { --siri-angle: 0deg; }
+  to   { --siri-angle: 360deg; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .siri-orb::before { animation: none; }
+}
+
+/* Mic pulse ring */
+@keyframes mic-pulse {
+  0%   { transform: scale(1);   opacity: 0.6; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+.mic-pulse {
+  animation: mic-pulse 1.2s ease-out infinite;
+}

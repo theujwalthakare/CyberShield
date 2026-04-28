@@ -4,6 +4,7 @@ import { createServerClient } from "@supabase/ssr";
 import { canAccessPath, normalizeRole } from "@/lib/rbac";
 
 const AUTH_ROUTES = ["/sign-in", "/sign-up", "/auth/sign-in", "/auth/sign-up"];
+const PUBLIC_ROUTES = ["/chat", "/api/chat"];
 const PENDING_PAGE = "/pending-approval";
 
 function getRoleHomePath(role: string | null) {
@@ -16,14 +17,17 @@ function getRoleHomePath(role: string | null) {
   }
 }
 
-function applySecurityHeaders(response: NextResponse) {
+function applySecurityHeaders(response: NextResponse, pathname: string) {
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-  response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  // Allow microphone on /chat for voice input
+  const micPolicy = pathname.startsWith("/chat") ? "microphone=(self)" : "microphone=()";
+  response.headers.set("Permissions-Policy", `camera=(), ${micPolicy}, geolocation=()`);
 }
 
 function isProtectedPath(pathname: string) {
+  if (PUBLIC_ROUTES.some((r) => pathname.startsWith(r))) return false;
   return (
     pathname.startsWith("/admin") ||
     pathname.startsWith("/officer") ||
@@ -52,7 +56,7 @@ export default async function middleware(request: NextRequest) {
   // Allow pending-approval page through without auth check
   if (pathname === PENDING_PAGE) {
     const response = NextResponse.next({ request });
-    applySecurityHeaders(response);
+    applySecurityHeaders(response, pathname);
     return response;
   }
 
@@ -79,7 +83,7 @@ export default async function middleware(request: NextRequest) {
     const signInUrl = new URL("/sign-in", request.url);
     signInUrl.searchParams.set("next", pathname);
     const r = NextResponse.redirect(signInUrl);
-    applySecurityHeaders(r);
+    applySecurityHeaders(r, pathname);
     return r;
   }
 
@@ -99,7 +103,7 @@ export default async function middleware(request: NextRequest) {
 
     if (!role) {
       const r = NextResponse.redirect(new URL("/sign-in?error=missing-role", request.url));
-      applySecurityHeaders(r);
+      applySecurityHeaders(r, pathname);
       return r;
     }
 
@@ -113,7 +117,7 @@ export default async function middleware(request: NextRequest) {
 
       if (officer && !officer.is_active) {
         const r = NextResponse.redirect(new URL(PENDING_PAGE, request.url));
-        applySecurityHeaders(r);
+        applySecurityHeaders(r, pathname);
         return r;
       }
     }
@@ -122,19 +126,19 @@ export default async function middleware(request: NextRequest) {
     // We use a dedicated pending_approval flag approach: role = "pending_officer" | "pending_analyst"
     if ((role as string) === "pending_officer" || (role as string) === "pending_analyst") {
       const r = NextResponse.redirect(new URL(PENDING_PAGE, request.url));
-      applySecurityHeaders(r);
+      applySecurityHeaders(r, pathname);
       return r;
     }
 
     // ── Role-based path access ────────────────────────────────────
     if (!canAccessPath(role, pathname)) {
       const r = NextResponse.redirect(new URL(getRoleHomePath(role), request.url));
-      applySecurityHeaders(r);
+      applySecurityHeaders(r, pathname);
       return r;
     }
   }
 
-  applySecurityHeaders(response);
+  applySecurityHeaders(response, pathname);
   return response;
 }
 
